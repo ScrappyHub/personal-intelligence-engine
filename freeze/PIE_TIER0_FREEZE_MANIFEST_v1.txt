@@ -1,0 +1,18 @@
+PIE Tier-0 Freeze Manifest v1
+repo_root: C:\dev\pie
+green_token_1: SELFTEST_PIE_TIER0_V1_GREEN
+green_token_2: PIE_TIER0_FULL_GREEN_V1_OK
+freeze_date_utc: 2026-03-08T05:01:03.2221883Z
+status: FIRST_FULL_GREEN_STANDALONE
+
+authoritative_runner: scripts\_RUN_pie_tier0_full_green_v1.ps1
+authoritative_selftest: scripts\_selftest_pie_tier0_v1.ps1
+authoritative_builder: scripts\pie_build_packet_optionA_v1.ps1
+authoritative_verifier: scripts\pie_verify_packet_optionA_v1.ps1
+authoritative_signer: scripts\pie_run_packet_sign_v1.ps1
+authoritative_vector_materializer: scripts\pie_materialize_vectors_v1.ps1
+
+notes:
+- PIE is Tier-0 standalone first.
+- Ecosystem integrations are deferred and not required for correctness.
+- This freeze captures the first real FULL_GREEN end-to-end standalone packet pipeline.

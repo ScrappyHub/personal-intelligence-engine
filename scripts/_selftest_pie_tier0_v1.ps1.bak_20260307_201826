@@ -1,0 +1,162 @@
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [string]$RunId = "pie0",
+  [switch]$SkipSign
+)
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+function Resolve-VecPacketRoot([string]$VecDir){
+  $p = Join-Path $VecDir "packet"
+  if(Test-Path -LiteralPath $p -PathType Container){ return $p }
+  return $VecDir
+}
+
+$RepoRoot=(Resolve-Path -LiteralPath $RepoRoot).Path
+. (Join-Path $RepoRoot "scripts\_lib_pie_tier0_v1.ps1")
+Write-Host "SELFTEST_PIE_TIER0_V1_START" -ForegroundColor Yellow
+Write-Host "VECTORS_MATERIALIZE_START" -ForegroundColor Yellow
+& (Join-Path $RepoRoot "scripts\pie_materialize_vectors_v1.ps1") -RepoRoot $RepoRoot | Out-Host
+Write-Host "VECTORS_MATERIALIZE_OK" -ForegroundColor Green
+# Canonical vector bootstrap FROM the just-built valid packet
+$tv = Join-Path $RepoRoot "test_vectors"
+if (Test-Path -LiteralPath $tv -PathType Container) { Remove-Item -LiteralPath $tv -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $tv | Out-Null
+
+$srcPacket = Join-Path (Join-Path $RepoRoot "proofs\runs\pie0") "packet"
+if (-not (Test-Path -LiteralPath $srcPacket -PathType Container)) { Die ("MISSING_SOURCE_PACKET: " + $srcPacket) }
+
+$posRoot = Join-Path $tv "pos_minimal_v1"
+$n1Root  = Join-Path $tv "neg_manifest_contains_packet_id_v1"
+$n2Root  = Join-Path $tv "neg_packet_id_mismatch_v1"
+$n3Root  = Join-Path $tv "neg_sha256_mismatch_v1"
+
+$pos = Join-Path $posRoot "packet"
+$n1  = Join-Path $n1Root  "packet"
+$n2  = Join-Path $n2Root  "packet"
+$n3  = Join-Path $n3Root  "packet"
+
+foreach($d in @($posRoot,$n1Root,$n2Root,$n3Root)){
+  New-Item -ItemType Directory -Force -Path $d | Out-Null
+}
+
+Copy-Item -LiteralPath $srcPacket -Destination $pos -Recurse -Force
+Copy-Item -LiteralPath $srcPacket -Destination $n1  -Recurse -Force
+Copy-Item -LiteralPath $srcPacket -Destination $n2  -Recurse -Force
+Copy-Item -LiteralPath $srcPacket -Destination $n3  -Recurse -Force
+
+# NEG1: manifest contains forbidden packet_id field
+$mf1    = Join-Path $n1 "manifest.json"
+$mf1Raw = [System.IO.File]::ReadAllText($mf1, (New-Object System.Text.UTF8Encoding($false)))
+$mf1Obj = ConvertFrom-Json -InputObject $mf1Raw -AsHashtable
+$mf1Obj["packet_id"] = "BAD_NEGATIVE_VECTOR"
+$mf1New = ($mf1Obj | ConvertTo-Json -Depth 20 -Compress)
+[System.IO.File]::WriteAllText($mf1, ($mf1New + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+
+# NEG2: packet_id mismatch
+$pid2 = Join-Path $n2 "packet_id.txt"
+[System.IO.File]::WriteAllText($pid2, (("0" * 64) + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+
+# NEG3: sha256sums mismatch
+$sum3 = Join-Path $n3 "sha256sums.txt"
+$sumLines = @([System.IO.File]::ReadAllLines($sum3, (New-Object System.Text.UTF8Encoding($false))))
+if ($sumLines.Count -lt 1) { Die ("NEG3_EMPTY_SHA256SUMS: " + $sum3) }
+$parts = $sumLines[0] -split '\s+', 2
+if ($parts.Count -lt 2) { Die ("NEG3_BAD_SHA256SUMS_LINE: " + $sumLines[0]) }
+$sumLines[0] = (("0" * 64) + "  " + $parts[1])
+[System.IO.File]::WriteAllText($sum3, (($sumLines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+
+Write-Host "SELFTEST_VECTORS_FROM_VALID_PACKET_OK" -ForegroundColor Green
+Write-Host ("  POS_PKT: " + $pos) -ForegroundColor Green
+Write-Host ("  NEG1_PKT: " + $n1) -ForegroundColor Green
+Write-Host ("  NEG2_PKT: " + $n2) -ForegroundColor Green
+Write-Host ("  NEG3_PKT: " + $n3) -ForegroundColor Green
+
+
+# Canonical vector bootstrap (StrictMode-safe)
+$tv = Join-Path $RepoRoot "test_vectors"
+$pos = Resolve-VecPacketRoot (Join-Path $tv "pos_minimal_v1")
+$n1  = Resolve-VecPacketRoot (Join-Path $tv "neg_manifest_contains_packet_id_v1")
+$n2  = Resolve-VecPacketRoot (Join-Path $tv "neg_packet_id_mismatch_v1")
+$n3  = Resolve-VecPacketRoot (Join-Path $tv "neg_sha256_mismatch_v1")
+Write-Host ("VEC_PACKET_ROOTS_OK") -ForegroundColor Green
+Write-Host ("  POS_PKT: " + $pos) -ForegroundColor Green
+Write-Host ("  NEG1_PKT: " + $n1) -ForegroundColor Green
+Write-Host ("  NEG2_PKT: " + $n2) -ForegroundColor Green
+Write-Host ("  NEG3_PKT: " + $n3) -ForegroundColor Green
+
+
+
+
+
+
+# 1) seal
+& (Join-Path $RepoRoot "scripts\pie_seal_run_v1.ps1") -RepoRoot $RepoRoot -RunId $RunId | Out-Host
+
+# 2) build
+$pkt = & (Join-Path $RepoRoot "scripts\pie_build_packet_optionA_v1.ps1") -RepoRoot $RepoRoot -RunId $RunId
+if([string]::IsNullOrWhiteSpace($pkt)){ Die "BUILD_DID_NOT_RETURN_PACKETROOT" }
+$pkt = (Resolve-Path -LiteralPath $pkt).Path
+
+# 3) sign (uses existing signer if present)
+if(-not $SkipSign){
+  $signer = Join-Path $RepoRoot "scripts\pie_run_packet_sign_v1.ps1"
+  if(-not (Test-Path -LiteralPath $signer -PathType Leaf)){ Die ("MISSING_SIGNER: " + $signer) }
+  & $signer -RepoRoot $RepoRoot -PacketRoot $pkt -Namespace "pie" -Principal "pie.tier0" | Out-Host
+} else { Write-Host "SKIP_SIGN=1" -ForegroundColor Yellow }
+
+# 4) verify (independent)
+& (Join-Path $RepoRoot "scripts\pie_verify_packet_optionA_v1.ps1") -RepoRoot $RepoRoot -PacketRoot $pkt | Out-Host
+
+# 5) build vectors (pos + 3 neg) deterministically from this packet
+Ensure-Dir $tv
+$pos = Join-Path $tv "pos_minimal_v1"
+if(Test-Path -LiteralPath $pos -PathType Container){ Remove-Item -LiteralPath $pos -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $pos | Out-Null
+Copy-Item -LiteralPath (Join-Path $pkt "*") -Destination $pos -Recurse -Force
+
+# neg1: manifest contains packet_id
+$neg1 = Join-Path $tv "neg_manifest_contains_packet_id_v1"
+if(Test-Path -LiteralPath $neg1 -PathType Container){ Remove-Item -LiteralPath $neg1 -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $neg1 | Out-Null
+Copy-Item -LiteralPath (Join-Path $pos "*") -Destination $neg1 -Recurse -Force
+$m1p = Join-Path $neg1 "manifest.json"
+$m1 = (Read-Utf8NoBom $m1p) | ConvertFrom-Json -ErrorAction Stop
+# inject forbidden field
+$m1 | Add-Member -NotePropertyName "packet_id" -NotePropertyValue "FORBIDDEN" -Force
+Write-CanonJsonFile $m1p $m1
+# sha256sums now wrong on purpose; keep as-is to ensure deterministic failure ordering
+
+# neg2: sha256 mismatch (modify payload without updating sha256sums)
+$neg2 = Join-Path $tv "neg_sha256_mismatch_v1"
+if(Test-Path -LiteralPath $neg2 -PathType Container){ Remove-Item -LiteralPath $neg2 -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $neg2 | Out-Null
+Copy-Item -LiteralPath (Join-Path $pos "*") -Destination $neg2 -Recurse -Force
+Write-Utf8NoBomLf (Join-Path $neg2 "payload\hello.txt") ("tamper`n")
+
+# neg3: packet_id mismatch (edit packet_id.txt)
+$neg3 = Join-Path $tv "neg_packet_id_mismatch_v1"
+if(Test-Path -LiteralPath $neg3 -PathType Container){ Remove-Item -LiteralPath $neg3 -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $neg3 | Out-Null
+Copy-Item -LiteralPath (Join-Path $pos "*") -Destination $neg3 -Recurse -Force
+Write-Utf8NoBomLf (Join-Path $neg3 "packet_id.txt") ("0" * 64 + "`n")
+
+# 6) run vector verification and assert deterministic reason tokens
+function Expect-Fail([string]$Path,[string]$Needle){
+  try {
+    & (Join-Path $RepoRoot "scripts\pie_verify_packet_optionA_v1.ps1") -RepoRoot $RepoRoot -PacketRoot $Path | Out-Host
+    Die ("EXPECTED_FAIL_BUT_VALID: " + $Path)
+  } catch {
+    $msg = [string]$_.Exception.Message
+    if($msg -notmatch [regex]::Escape($Needle)){ Die ("FAIL_WRONG_REASON expected=" + $Needle + " got=" + $msg) }
+    Write-Host ("EXPECTED_FAIL_OK: " + $Needle) -ForegroundColor Green
+  }
+}
+
+# positive
+& (Join-Path $RepoRoot "scripts\pie_verify_packet_optionA_v1.ps1") -RepoRoot $RepoRoot -PacketRoot (Resolve-VecPacketRoot $pos) | Out-Host
+# negatives (deterministic needles)
+Expect-Fail $neg1 "INVALID_MANIFEST_CONTAINS_PACKET_ID"
+Expect-Fail $neg2 "INVALID_SHA256_MISMATCH"
+Expect-Fail $neg3 "INVALID_PACKET_ID_MISMATCH"
+
+Write-Host "SELFTEST_PIE_TIER0_V1_GREEN" -ForegroundColor Green

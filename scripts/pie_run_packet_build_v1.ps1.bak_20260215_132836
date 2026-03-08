@@ -1,0 +1,91 @@
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [string]$RunId="",
+  [switch]$Sign,
+  [ValidateNotNullOrEmpty()][string]$Namespace="pie/run_packet.v1",
+  [string]$SigningKeyPath="",
+  [string]$Principal=""
+)
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+function Die([string]$m){ throw $m }
+$RepoRoot = $RepoRoot.TrimEnd("\")
+. (Join-Path $RepoRoot "scripts\_lib_neverlost_v1.ps1")
+
+function Sha256HexBytes([byte[]]$b){ if ($null -eq $b) { $b=@() }; $sha=[System.Security.Cryptography.SHA256]::Create(); try{$h=$sha.ComputeHash([byte[]]$b)}finally{$sha.Dispose()}; $sb=New-Object System.Text.StringBuilder; for($i=0;$i -lt $h.Length;$i++){[void]$sb.Append($h[$i].ToString("x2"))}; return $sb.ToString() }
+function Sha256HexFile([string]$Path){ $sha=[System.Security.Cryptography.SHA256]::Create(); try{$fs=[System.IO.File]::OpenRead($Path); try{$h=$sha.ComputeHash($fs)}finally{$fs.Dispose()}}finally{$sha.Dispose()}; $sb=New-Object System.Text.StringBuilder; for($i=0;$i -lt $h.Length;$i++){[void]$sb.Append($h[$i].ToString("x2"))}; return $sb.ToString() }
+function Write-Utf8NoBomLf([string]$Path,[string]$Text){ $dir=Split-Path -Parent $Path; if($dir -and -not (Test-Path -LiteralPath $dir -PathType Container)){ New-Item -ItemType Directory -Force -Path $dir | Out-Null }; $t=$Text.Replace("`r`n","`n").Replace("`r","`n"); if(-not $t.EndsWith("`n")){ $t += "`n" }; $enc=New-Object System.Text.UTF8Encoding($false); [System.IO.File]::WriteAllText($Path,$t,$enc) }
+function Read-Utf8NoBom([string]$Path){ if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }; $enc=New-Object System.Text.UTF8Encoding($false); return [System.IO.File]::ReadAllText($Path,$enc) }
+
+function Get-LatestRunId([string]$RepoRoot){
+  $rl = Join-Path $RepoRoot "runs\run_ledger.ndjson"
+  if (-not (Test-Path -LiteralPath $rl -PathType Leaf)) { Die ("missing_run_ledger: " + $rl) }
+  $lines = @(@(Get-Content -LiteralPath $rl -ErrorAction Stop))
+  for($i=$lines.Count-1; $i -ge 0; $i--){
+    $ln = $lines[$i].Trim(); if ($ln.Length -lt 2) { continue }
+    try { $o = $ln | ConvertFrom-Json } catch { continue }
+    $rid = [string]$o.run_id
+    if ($rid -match "^[0-9a-f]{32}$") { return $rid }
+  }
+  Die "no_run_id_found_in_ledger"
+}
+
+if ([string]::IsNullOrWhiteSpace($RunId)) { $RunId = Get-LatestRunId $RepoRoot }
+if ($RunId -notmatch "^[0-9a-f]{32}$") { Die ("bad_run_id: " + $RunId) }
+
+$runDir = Join-Path $RepoRoot ("runs\run_" + $RunId)
+if (-not (Test-Path -LiteralPath $runDir -PathType Container)) { Die ("missing_sealed_run_dir: " + $runDir + " (run pie_run_seal_v1.ps1 first)") }
+$runSums = Join-Path $runDir "sha256sums.txt"
+if (-not (Test-Path -LiteralPath $runSums -PathType Leaf)) { Die ("missing_run_sha256sums: " + $runSums) }
+
+$outbox = Join-Path $RepoRoot "packets\outbox"
+if (-not (Test-Path -LiteralPath $outbox -PathType Container)) { New-Item -ItemType Directory -Force -Path $outbox | Out-Null }
+$tmp = Join-Path $outbox ("_tmp_build_" + ([guid]::NewGuid().ToString("n")))
+New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+
+# (1) payload/**
+$payload = Join-Path $tmp "payload\run"
+New-Item -ItemType Directory -Force -Path $payload | Out-Null
+Copy-Item -LiteralPath $runDir -Destination (Join-Path $payload ("run_" + $RunId)) -Recurse -Force
+
+# (2) manifest.json WITHOUT packet_id
+$manifestPath = Join-Path $tmp "manifest.json"
+$m = @{ schema="packet.manifest.v1"; kind="pie.run_packet"; run_id=$RunId; created_utc=(Get-Date).ToUniversalTime().ToString("o"); option="A"; payload_rel=("payload/run/run_" + $RunId + "/") }
+$mCanon = NL_ToCanonJson $m
+Write-Utf8NoBomLf $manifestPath $mCanon
+
+# (3) PacketId from manifest-without-id
+$mBytes = [System.Text.Encoding]::UTF8.GetBytes((Read-Utf8NoBom $manifestPath))
+$packetId = Sha256HexBytes $mBytes
+$pidTxt = Join-Path $tmp "packet_id.txt"
+Write-Utf8NoBomLf $pidTxt ($packetId)
+
+# (4) signatures (optional) AFTER packet_id.txt exists
+if ($Sign) {
+  $signer = Join-Path $RepoRoot "scripts\pie_run_packet_sign_v1.ps1"
+  if (-not (Test-Path -LiteralPath $signer -PathType Leaf)) { Die ("missing signer script: " + $signer) }
+  & (Get-Command powershell.exe -ErrorAction Stop).Source -NoProfile -ExecutionPolicy Bypass -File $signer -RepoRoot $RepoRoot -PacketRoot $tmp -Namespace $Namespace -SigningKeyPath $SigningKeyPath -Principal $Principal
+}
+
+# (5) sha256sums LAST (hashes signatures too)
+$sumsPath = Join-Path $tmp "sha256sums.txt"
+$files = New-Object System.Collections.Generic.List[string]
+[void]$files.Add("manifest.json")
+[void]$files.Add("packet_id.txt")
+if (Test-Path -LiteralPath (Join-Path $tmp "sig_envelope.v1.json") -PathType Leaf) { [void]$files.Add("sig_envelope.v1.json") }
+if (Test-Path -LiteralPath (Join-Path $tmp "signatures\sig_envelope.sig") -PathType Leaf) { [void]$files.Add("signatures\sig_envelope.sig") }
+$payloadRoot = Join-Path $tmp "payload"
+$payloadFiles = @(@(Get-ChildItem -LiteralPath $payloadRoot -Recurse -File | ForEach-Object { $_.FullName.Substring($tmp.Length).TrimStart("\") }))
+foreach($r in $payloadFiles){ [void]$files.Add($r) }
+$uniq = @(@($files.ToArray() | Sort-Object -Unique))
+$sumLines = New-Object System.Collections.Generic.List[string]
+foreach($r in $uniq){ $fp = Join-Path $tmp $r; $h = Sha256HexFile $fp; [void]$sumLines.Add(($h + "  " + ($r -replace "\\","/"))) }
+Write-Utf8NoBomLf $sumsPath (($sumLines.ToArray() -join "`n"))
+
+# finalize into outbox/<PacketId>
+$final = Join-Path $outbox $packetId
+if (Test-Path -LiteralPath $final -PathType Container) { Remove-Item -LiteralPath $final -Recurse -Force }
+Move-Item -LiteralPath $tmp -Destination $final
+$msg = "OK: run packet built: " + $packetId + " run_id=" + $RunId + " " + $final
+Write-Host $msg -ForegroundColor Green
+Write-Output $msg

@@ -1,0 +1,60 @@
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$true)][string]$PacketRoot,
+  [ValidateNotNullOrEmpty()][string]$Namespace="pie/run_packet.v1",
+  [string]$SigningKeyPath="",
+  [string]$Principal=""
+)
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+function Die([string]$m){ throw $m }
+$RepoRoot = $RepoRoot.TrimEnd("\")
+$PacketRoot = (Resolve-Path -LiteralPath $PacketRoot).Path
+if (-not (Test-Path -LiteralPath $PacketRoot -PathType Container)) { Die ("packet_root_not_found: " + $PacketRoot) }
+. (Join-Path $RepoRoot "scripts\_lib_neverlost_v1.ps1")
+
+function Get-SshKeygen(){ $ssh=$env:NEVERLOST_SSH_KEYGEN; if(-not $ssh){$ssh=[Environment]::GetEnvironmentVariable("NEVERLOST_SSH_KEYGEN","User")} ; if(-not $ssh){Die "NEVERLOST_SSH_KEYGEN not set (session or User)."} ; if(-not (Test-Path -LiteralPath $ssh -PathType Leaf)){Die ("ssh-keygen not found: " + $ssh)} ; return $ssh }
+function Get-SigningKey([string]$Override){ if($Override){ if(-not (Test-Path -LiteralPath $Override -PathType Leaf)){Die ("signing key not found: " + $Override)}; return $Override } $k=$env:NEVERLOST_SIGNING_KEY; if(-not $k){$k=[Environment]::GetEnvironmentVariable("NEVERLOST_SIGNING_KEY","User")} ; if(-not $k){$k=Join-Path $env:USERPROFILE ".ssh\id_ed25519"} ; if(-not (Test-Path -LiteralPath $k -PathType Leaf)){Die ("signing key not found (set NEVERLOST_SIGNING_KEY): " + $k)} ; return $k }
+function Sha256HexFile([string]$Path){ $sha=[System.Security.Cryptography.SHA256]::Create(); try{ $fs=[System.IO.File]::OpenRead($Path); try{ $h=$sha.ComputeHash($fs) } finally { $fs.Dispose() } } finally { $sha.Dispose() }; $sb=New-Object System.Text.StringBuilder; for($i=0;$i -lt $h.Length;$i++){ [void]$sb.Append($h[$i].ToString("x2")) }; return $sb.ToString() }
+
+$manifest = Join-Path $PacketRoot "manifest.json"
+$pidTxt   = Join-Path $PacketRoot "packet_id.txt"
+if (-not (Test-Path -LiteralPath $manifest -PathType Leaf)) { Die ("missing_manifest: " + $manifest) }
+if (-not (Test-Path -LiteralPath $pidTxt   -PathType Leaf)) { Die ("missing_packet_id_txt: " + $pidTxt) }
+$packetId = (Get-Content -LiteralPath $pidTxt -ErrorAction Stop | Select-Object -First 1).Trim()
+if ($packetId -notmatch "^[0-9a-f]{64}$") { Die ("bad_packet_id_txt: " + $packetId) }
+
+if ([string]::IsNullOrWhiteSpace($Principal)) {
+  $tb = Join-Path $RepoRoot "proofs\trust\trust_bundle.json"
+  $o = (NL_ReadUtf8 $tb) | ConvertFrom-Json
+  $keys = @(@($o.keys))
+  if ($keys.Count -lt 1) { Die "trust_bundle.json has no keys[]" }
+  $Principal = [string]$keys[0].principal
+  if ([string]::IsNullOrWhiteSpace($Principal)) { Die "trust_bundle.json missing keys[0].principal" }
+}
+
+$envPath = Join-Path $PacketRoot "sig_envelope.v1.json"
+$sigDir  = Join-Path $PacketRoot "signatures"
+if (-not (Test-Path -LiteralPath $sigDir -PathType Container)) { New-Item -ItemType Directory -Force -Path $sigDir | Out-Null }
+$sigPath = Join-Path $sigDir "sig_envelope.sig"
+
+$mHash  = "sha256:" + (Sha256HexFile $manifest)
+$pidHash = "sha256:" + (Sha256HexFile $pidTxt)
+$e = @{ schema="sig_envelope.v1"; purpose="pie.run_packet"; packet_id=$packetId; namespace=$Namespace; principal=$Principal; manifest_sha256=$mHash; packet_id_txt_sha256=$pidHash; time_utc=(Get-Date).ToUniversalTime().ToString("o") }
+$canon = NL_ToCanonJson $e
+NL_WriteUtf8NoBomLf $envPath $canon
+
+$ssh = Get-SshKeygen
+$key = Get-SigningKey $SigningKeyPath
+$tmpSig = $envPath + ".sig"
+if (Test-Path -LiteralPath $tmpSig -PathType Leaf) { Remove-Item -LiteralPath $tmpSig -Force }
+& $ssh -Y sign -f $key -n $Namespace -I $Principal $envPath | Out-Null
+if ($LASTEXITCODE -ne 0) { Die ("ssh_keygen_sign_failed: exit_code=" + $LASTEXITCODE) }
+if (-not (Test-Path -LiteralPath $tmpSig -PathType Leaf)) { Die ("sign_failed_no_sig: " + $tmpSig) }
+if (Test-Path -LiteralPath $sigPath -PathType Leaf) { Remove-Item -LiteralPath $sigPath -Force }
+Move-Item -LiteralPath $tmpSig -Destination $sigPath -Force
+if (-not (Test-Path -LiteralPath $envPath -PathType Leaf)) { Die ("signer_missing_env_after_write: " + $envPath) }
+if (-not (Test-Path -LiteralPath $sigPath -PathType Leaf)) { Die ("signer_missing_sig_after_move: " + $sigPath) }
+$msg = "OK: packet signed: " + $packetId + " env=" + $envPath + " sig=" + $sigPath
+Write-Host $msg -ForegroundColor Green
+Write-Output $msg

@@ -1,0 +1,69 @@
+param(
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$true)][string]$RunId
+)
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+. (Join-Path $RepoRoot "scripts\_lib_neverlost_v1.ps1")
+. (Join-Path $RepoRoot "scripts\_lib_pie_v1.ps1")
+$RepoRoot = $RepoRoot.TrimEnd("\")
+
+# Run artifacts (v1): we normalize into runs\run_<id>\
+$runsDir = Join-Path $RepoRoot "runs"
+if (-not (Test-Path -LiteralPath $runsDir -PathType Container)) { PIE_Die ("missing_runs_dir: " + $runsDir) }
+$runDir = Join-Path $runsDir ("run_" + $RunId)
+if (-not (Test-Path -LiteralPath $runDir -PathType Container)) { New-Item -ItemType Directory -Force -Path $runDir | Out-Null }
+
+$inOld  = Join-Path $runsDir ("run_" + $RunId + "_input.txt")
+$outOld = Join-Path $runsDir ("run_" + $RunId + "_output.txt")
+$inNew  = Join-Path $runDir "input.txt"
+$outNew = Join-Path $runDir "output.txt"
+
+if (Test-Path -LiteralPath $inOld -PathType Leaf) {
+  if (Test-Path -LiteralPath $inNew -PathType Leaf) { Remove-Item -LiteralPath $inNew -Force }
+  Move-Item -LiteralPath $inOld -Destination $inNew
+}
+if (Test-Path -LiteralPath $outOld -PathType Leaf) {
+  if (Test-Path -LiteralPath $outNew -PathType Leaf) { Remove-Item -LiteralPath $outNew -Force }
+  Move-Item -LiteralPath $outOld -Destination $outNew
+}
+
+if (-not (Test-Path -LiteralPath $inNew -PathType Leaf))  { PIE_Die ("missing_run_input: " + $inNew) }
+if (-not (Test-Path -LiteralPath $outNew -PathType Leaf)) { PIE_Die ("missing_run_output: " + $outNew) }
+
+# Pull run_record.v1 from run_ledger.ndjson and write canonical run_record.v1.json
+$ledger = Join-Path $runsDir "run_ledger.ndjson"
+if (-not (Test-Path -LiteralPath $ledger -PathType Leaf)) { PIE_Die ("missing_run_ledger: " + $ledger) }
+$lines = @(@([System.IO.File]::ReadAllLines($ledger,(New-Object System.Text.UTF8Encoding($false)))))
+$hit = $null
+for($i=$lines.Count-1; $i -ge 0; $i--){
+  $ln = $lines[$i]
+  if ([string]::IsNullOrWhiteSpace($ln)) { continue }
+  try { $o = $ln | ConvertFrom-Json } catch { continue }
+  if ([string]$o.schema -ne "run_record.v1") { continue }
+  if ([string]$o.run_id -ne $RunId) { continue }
+  $hit = $o; break
+}
+if ($null -eq $hit) { PIE_Die ("run_record_not_found_in_ledger: " + $RunId) }
+$rrPath = Join-Path $runDir "run_record.v1.json"
+$rrCanon = NL_ToCanonJson $hit
+NL_WriteUtf8NoBomLf $rrPath $rrCanon
+
+# Write sha256sums.txt (relative paths within runDir)
+$sumsPath = Join-Path $runDir "sha256sums.txt"
+$entries = New-Object System.Collections.Generic.List[string]
+$files = @("input.txt","output.txt","run_record.v1.json")
+foreach($rel in $files){
+  $fp = Join-Path $runDir $rel
+  if (-not (Test-Path -LiteralPath $fp -PathType Leaf)) { PIE_Die ("missing_run_file: " + $fp) }
+  $hx = PIE_Sha256HexFile $fp
+  [void]$entries.Add(($hx + "  " + $rel))
+}
+$sumsText = (($entries.ToArray() | Sort-Object) -join "`n") + "`n"
+NL_WriteUtf8NoBomLf $sumsPath $sumsText
+$sumsSha = PIE_Sha256HexBytes ([System.Text.Encoding]::UTF8.GetBytes($sumsText))
+
+NL_AppendReceipt $RepoRoot "pie_run_seal" ("sealed run " + $RunId) @{ run_id=$RunId; file_count=$files.Count; sums_sha256=("sha256:" + $sumsSha) }
+Write-Host ("OK: run sealed: " + $RunId + " sums_sha256=sha256:" + $sumsSha) -ForegroundColor Green
+Write-Output ("sha256:" + $sumsSha)
+

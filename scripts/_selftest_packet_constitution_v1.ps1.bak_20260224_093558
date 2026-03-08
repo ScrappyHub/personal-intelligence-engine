@@ -1,0 +1,27 @@
+param([Parameter(Mandatory=$true)][string]$RepoRoot)
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+. (Join-Path $RepoRoot "scripts\_lib_neverlost_v1.ps1")
+. (Join-Path $RepoRoot "scripts\_lib_pie_v1.ps1")
+$RepoRoot = $RepoRoot.TrimEnd("\")
+function Die([string]$m){ throw ("PCV1_SELFTEST_FAIL: " + $m) }
+
+$tv = Join-Path $RepoRoot "test_vectors\packet_constitution_v1\minimal_packet_v1"
+if (-not (Test-Path -LiteralPath $tv -PathType Container)) { Die ("missing_test_vector_dir: " + $tv) }
+$verify = Join-Path $RepoRoot "scripts\packet_verify_v1.ps1"
+if (-not (Test-Path -LiteralPath $verify -PathType Leaf)) { Die ("missing_verify_script: " + $verify) }
+
+# Verify packet (MUST NOT MUTATE)
+& (Get-Command powershell.exe -ErrorAction Stop).Source -NoProfile -ExecutionPolicy Bypass -File $verify -RepoRoot $RepoRoot -PacketRoot $tv | Out-Null
+
+# Check expected packet id matches packet_id.txt
+$pid = (NL_ReadUtf8 (Join-Path $tv "packet_id.txt")).Trim()
+$exp = (NL_ReadUtf8 (Join-Path $tv "expected_packet_id.txt")).Trim()
+if ($pid -ne $exp) { Die ("packet_id_mismatch expected=" + $exp + " got=" + $pid) }
+
+# Check expected sha256sums matches
+$s = NL_ReadUtf8 (Join-Path $tv "sha256sums.txt")
+$es = NL_ReadUtf8 (Join-Path $tv "expected_sha256sums.txt")
+if ($s.Replace("`r`n","`n").Replace("`r","`n") -ne $es.Replace("`r`n","`n").Replace("`r","`n")) { Die "sha256sums_mismatch" }
+
+Write-Host ("PCV1_SELFTEST_OK packet_id=" + $pid) -ForegroundColor Green

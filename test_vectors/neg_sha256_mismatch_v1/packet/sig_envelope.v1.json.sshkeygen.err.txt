@@ -1,0 +1,2 @@
+Signing file C:\dev\pie\proofs\runs\pie0\packet\sig_envelope.v1.json
+Write signature to C:\dev\pie\proofs\runs\pie0\packet\sig_envelope.v1.json.sig

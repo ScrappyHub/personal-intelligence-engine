@@ -1,0 +1,1 @@
+{"schema":"trust_bundle.v1","keys":[{"principal":"single-tenant/<tenant_authority>/authority/<producer>","key_id":"<stable_key_id>","pubkey":"ssh-ed25519 AAAA...","namespaces":["pie"]}]}

@@ -1,0 +1,31 @@
+param([Parameter(Mandatory=$true)][string]$RepoRoot)
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+$RepoRoot=(Resolve-Path -LiteralPath $RepoRoot).Path
+$PSExe=(Get-Command powershell.exe -ErrorAction Stop).Source
+$Scripts=Join-Path $RepoRoot "scripts"
+$Scratch=Join-Path $Scripts "_scratch"
+function Die([string]$m){ throw $m }
+function Ensure-Dir([string]$p){ if($p -and -not(Test-Path -LiteralPath $p -PathType Container)){ New-Item -ItemType Directory -Force -Path $p | Out-Null } }
+function Read-Utf8NoBom([string]$Path){ if(-not(Test-Path -LiteralPath $Path -PathType Leaf)){ Die ("MISSING_FILE: " + $Path) }; $enc=New-Object System.Text.UTF8Encoding($false); return [System.IO.File]::ReadAllText($Path,$enc) }
+function Parse-GateFile([string]$Path){ [void][ScriptBlock]::Create((Read-Utf8NoBom $Path)) }
+function Run-Child([string]$Script,[hashtable]$Args){
+  $alist=@()
+  foreach($k in @($Args.Keys)){ $alist += @("-" + $k); $alist += @([string]$Args[$k]) }
+  & $PSExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $Script @alist
+  if($LASTEXITCODE -ne 0){ Die ("CHILD_FAIL exit=" + $LASTEXITCODE + " script=" + $Script) }
+}
+
+Write-Host "PIE_TIER0_FULL_GREEN_V1_START" -ForegroundColor Yellow
+foreach($p in @(
+  (Join-Path $Scripts "_lib_pie_tier0_v1.ps1"),
+  (Join-Path $Scripts "pie_seal_run_v1.ps1"),
+  (Join-Path $Scripts "pie_build_packet_optionA_v1.ps1"),
+  (Join-Path $Scripts "pie_verify_packet_optionA_v1.ps1"),
+  (Join-Path $Scripts "_selftest_pie_tier0_v1.ps1")
+)){ Parse-GateFile $p }
+Write-Host "PARSE_GATE_OK" -ForegroundColor Green
+
+# Run selftest in child proc for clean determinism
+Run-Child (Join-Path $Scripts "_selftest_pie_tier0_v1.ps1") @{ RepoRoot=$RepoRoot } | Out-Host
+Write-Host "PIE_TIER0_FULL_GREEN_V1_OK" -ForegroundColor Green

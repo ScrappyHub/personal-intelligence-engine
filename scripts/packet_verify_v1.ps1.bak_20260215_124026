@@ -1,0 +1,35 @@
+param([Parameter(Mandatory=$true)][string]$RepoRoot,[Parameter(Mandatory=$true)][string]$PacketRoot)
+$ErrorActionPreference="Stop"
+Set-StrictMode -Version Latest
+. (Join-Path $RepoRoot "scripts\_lib_packet_constitution_v1.ps1")
+$PacketRoot = (Resolve-Path -LiteralPath $PacketRoot).Path
+$mPath = Join-Path $PacketRoot "manifest.json"
+$packetIdPath = Join-Path $PacketRoot "packet_id.txt"
+$sumsPath = Join-Path $PacketRoot "sha256sums.txt"
+if (-not (Test-Path -LiteralPath $mPath -PathType Leaf)) { PC_Die ("missing_manifest: " + $mPath) }
+if (-not (Test-Path -LiteralPath $packetIdPath -PathType Leaf)) { PC_Die ("missing_packet_id: " + $packetIdPath) }
+if (-not (Test-Path -LiteralPath $sumsPath -PathType Leaf)) { PC_Die ("missing_sha256sums: " + $sumsPath) }
+
+# PacketId rule: SHA256(canonical_bytes(manifest-without-id)) == sha256(manifest.json on disk)
+$derivedPacketId = PC_Sha256HexFile $mPath
+$packetIdTxt = ([System.IO.File]::ReadAllText($packetIdPath,(New-Object System.Text.UTF8Encoding($false)))).Trim()
+if ($packetIdTxt -ne $derivedPacketId) { PC_Die ("PACKETID_MISMATCH: packet_id.txt=" + $packetIdTxt + " derived=" + $derivedPacketId) }
+
+# sha256sums check (no mutation): every line must match
+$enc = New-Object System.Text.UTF8Encoding($false)
+$lines = @(@([System.IO.File]::ReadAllLines($sumsPath,$enc)))
+if ($lines.Count -lt 1) { PC_Die "sha256sums.txt is empty" }
+foreach($line in $lines){
+  if ([string]::IsNullOrWhiteSpace($line)) { continue }
+  $m = [regex]::Match($line, "^(?<h>[0-9a-f]{64})\s\s(?<p>.+)$")
+  if (-not $m.Success) { PC_Die ("bad_sha256sums_line: " + $line) }
+  $h = $m.Groups["h"].Value
+  $rel = $m.Groups["p"].Value
+  if ($rel -ieq "sha256sums.txt") { PC_Die "sha256sums.txt MUST NOT include itself" }
+  $abs = Join-Path $PacketRoot ($rel -replace "/","\")
+  if (-not (Test-Path -LiteralPath $abs -PathType Leaf)) { PC_Die ("missing_required_file: " + $rel) }
+  $hh = PC_Sha256HexFile $abs
+  if ($hh -ne $h) { PC_Die ("SHA256_MISMATCH: " + $rel + " expected=" + $h + " got=" + $hh) }
+}
+Write-Host ("VERIFY_OK: " + $PacketRoot) -ForegroundColor Green
+Write-Host ("PacketId: " + $packetIdTxt) -ForegroundColor Cyan
