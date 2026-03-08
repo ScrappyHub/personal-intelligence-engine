@@ -1,0 +1,58 @@
+# PIE canonical ignores
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+*.user
+*.suo
+.vscode/
+.idea/
+
+# Python / model tooling
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Local runtime state that is not authoritative repo evidence
+models/**
+!models/.gitkeep
+
+packets/**
+!packets/.gitkeep
+
+registry/**
+!registry/.gitkeep
+
+runs/**
+!runs/.gitkeep
+
+# Keep authoritative freeze / proofs / vectors tracked explicitly
+# Do not ignore proofs/, freeze/, or test_vectors/
+
+# Scratch outputs that should not become new product surface by accident
+scripts/_scratch/*.tmp
+scripts/_scratch/*.log
+
+# Large model artifacts / archives
+*.bin
+*.safetensors
+*.gguf
+*.onnx
+*.pt
+*.pth
+*.ckpt
+*.tar
+*.zip
+*.7z
+*.iso
+
+# Secrets / local key material
+.env
+.env.*
+*.pem
+*.key
+id_ed25519
+id_ed25519.pub

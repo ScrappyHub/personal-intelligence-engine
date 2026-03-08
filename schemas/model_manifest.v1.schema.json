@@ -1,0 +1,1 @@
+{"schema":"model_manifest.v1","type":"object","required":["schema","model_id","backend","weights","weights_sha256"],"properties":{"schema":{"const":"model_manifest.v1"},"model_id":{"type":"string"},"backend":{"type":"string"},"license":{"type":"string"},"weights":{"type":"array","items":{"type":"string"}},"weights_sha256":{"type":"string"},"notes":{"type":"string"}}}

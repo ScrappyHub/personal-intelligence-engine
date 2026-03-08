@@ -1,0 +1,1 @@
+{"schema":"commitment.v1","type":"object","required":["schema","event_type","producer_time","payload_hash","prev_links"],"properties":{"schema":{"const":"commitment.v1"},"event_type":{"type":"string"},"producer_time":{"type":"string"},"payload_hash":{"type":"string"},"prev_links":{"type":"array","items":{"type":"string"}}}}
