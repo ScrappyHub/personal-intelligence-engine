@@ -1,8 +1,9 @@
 PIE Tier-0 Freeze Manifest v1
 repo_root: C:\dev\pie
+git_head: 0e5513c084b386e1628919cb3c0687ed34e49e06
 green_token_1: SELFTEST_PIE_TIER0_V1_GREEN
 green_token_2: PIE_TIER0_FULL_GREEN_V1_OK
-freeze_date_utc: 2026-03-08T05:01:03.2221883Z
+freeze_date_utc: 2026-03-08T05:12:47.6897549Z
 status: FIRST_FULL_GREEN_STANDALONE
 
 authoritative_runner: scripts\_RUN_pie_tier0_full_green_v1.ps1
@@ -16,3 +17,4 @@ notes:
 - PIE is Tier-0 standalone first.
 - Ecosystem integrations are deferred and not required for correctness.
 - This freeze captures the first real FULL_GREEN end-to-end standalone packet pipeline.
+- Local repo initialization occurred after first GREEN evidence.
