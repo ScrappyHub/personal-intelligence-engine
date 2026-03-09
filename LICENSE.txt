@@ -1,0 +1,9 @@
+Copyright (c) Alec Maiatico
+
+All rights reserved.
+
+This repository is currently published for public visibility, review, and architectural reference.
+
+No permission is granted to copy, modify, distribute, sublicense, sell, or use this work in production or derivative systems without prior written permission from the author.
+
+A future open-source or source-available license may be adopted later. Until then, all rights remain reserved.
