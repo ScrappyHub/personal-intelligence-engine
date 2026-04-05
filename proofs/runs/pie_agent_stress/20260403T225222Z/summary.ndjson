@@ -1,0 +1,26 @@
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_1","utc":"2026-04-03T22:52:22.9994018Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_1"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_2","utc":"2026-04-03T22:52:23.0624668Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_2"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_3","utc":"2026-04-03T22:52:23.0796168Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_3"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_4","utc":"2026-04-03T22:52:23.0917513Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_4"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_5","utc":"2026-04-03T22:52:23.1045558Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_5"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_6","utc":"2026-04-03T22:52:23.1167983Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_6"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_7","utc":"2026-04-03T22:52:23.1303564Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_7"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_8","utc":"2026-04-03T22:52:23.1432525Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_8"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_9","utc":"2026-04-03T22:52:23.1553967Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_9"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_10","utc":"2026-04-03T22:52:23.1707427Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_10"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_11","utc":"2026-04-03T22:52:23.1847186Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_11"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_12","utc":"2026-04-03T22:52:23.2002249Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_12"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_13","utc":"2026-04-03T22:52:23.2161559Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_13"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_14","utc":"2026-04-03T22:52:23.2313186Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_14"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_15","utc":"2026-04-03T22:52:23.2483574Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_15"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_16","utc":"2026-04-03T22:52:23.2622230Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_16"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_17","utc":"2026-04-03T22:52:23.2762647Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_17"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_18","utc":"2026-04-03T22:52:23.2909947Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_18"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_19","utc":"2026-04-03T22:52:23.3050321Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_19"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_20","utc":"2026-04-03T22:52:23.3169447Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_20"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_21","utc":"2026-04-03T22:52:23.3293359Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_21"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_22","utc":"2026-04-03T22:52:23.3429853Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_22"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_23","utc":"2026-04-03T22:52:23.3579289Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_23"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_24","utc":"2026-04-03T22:52:23.3718314Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_24"}
+{"schema":"pie.agent.stress.receipt.v1","session_id":"stress_agent_25","utc":"2026-04-03T22:52:23.3873174Z","ok":false,"error":"SESSION_ALREADY_EXISTS: stress_agent_25"}
+{"schema":"pie.agent.stress.summary.v1","iterations":25,"pass_count":0,"fail_count":25,"run_root":"C:\\dev\\pie\\proofs\\runs\\pie_agent_stress\\20260403T225222Z"}

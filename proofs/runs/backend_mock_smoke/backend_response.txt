@@ -1,0 +1,1 @@
+[mock:external-file][session:backend_smoke_1][msg:1] hello from backend smoke

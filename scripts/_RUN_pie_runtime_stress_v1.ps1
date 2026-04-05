@@ -1,71 +1,20 @@
 param(
-    [Parameter(Mandatory=$true)][string]$RepoRoot,
-    [int]$Iterations = 25
+  [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$false)][int]$Iterations = 50
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$PSExe = (Get-Command powershell.exe -ErrorAction Stop).Source
+$RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 
-function Run-Child {
-    param(
-        [Parameter(Mandatory=$true)][string]$ScriptPath,
-        [Parameter(Mandatory=$true)][string[]]$ArgumentList
-    )
+Write-Host "PIE_RUNTIME_STRESS_V1_START" -ForegroundColor DarkCyan
 
-    if(-not (Test-Path -LiteralPath $ScriptPath -PathType Leaf)){
-        throw ("MISSING_CHILD_SCRIPT: " + $ScriptPath)
-    }
+& (Join-Path $RepoRoot "scripts\_selftest_pie_agent_offline_v1.ps1") `
+  -RepoRoot $RepoRoot | Out-Host
 
-    & $PSExe @ArgumentList
-    if($LASTEXITCODE -ne 0){
-        throw ("CHILD_FAIL exit=" + $LASTEXITCODE + " script=" + $ScriptPath)
-    }
-}
-
-for($i=1; $i -le $Iterations; $i++){
-
-    $runId = "stress_" + $i
-    $packetRoot = Join-Path $RepoRoot ("proofs\runs\" + $runId + "\packet")
-
-    Write-Host ("RUN " + $runId) -ForegroundColor Cyan
-
-    Run-Child `
-        -ScriptPath (Join-Path $RepoRoot "scripts\pie_seal_run_v1.ps1") `
-        -ArgumentList @(
-            "-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass",
-            "-File",(Join-Path $RepoRoot "scripts\pie_seal_run_v1.ps1"),
-            "-RepoRoot",$RepoRoot,
-            "-RunId",$runId
-        )
-
-    Run-Child `
-        -ScriptPath (Join-Path $RepoRoot "scripts\pie_build_packet_optionA_v1.ps1") `
-        -ArgumentList @(
-            "-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass",
-            "-File",(Join-Path $RepoRoot "scripts\pie_build_packet_optionA_v1.ps1"),
-            "-RepoRoot",$RepoRoot,
-            "-RunId",$runId
-        )
-
-    Run-Child `
-        -ScriptPath (Join-Path $RepoRoot "scripts\pie_run_packet_sign_v1.ps1") `
-        -ArgumentList @(
-            "-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass",
-            "-File",(Join-Path $RepoRoot "scripts\pie_run_packet_sign_v1.ps1"),
-            "-RepoRoot",$RepoRoot,
-            "-PacketRoot",$packetRoot
-        )
-
-    Run-Child `
-        -ScriptPath (Join-Path $RepoRoot "scripts\pie_verify_packet_optionA_v1.ps1") `
-        -ArgumentList @(
-            "-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass",
-            "-File",(Join-Path $RepoRoot "scripts\pie_verify_packet_optionA_v1.ps1"),
-            "-RepoRoot",$RepoRoot,
-            "-PacketRoot",$packetRoot
-        )
-}
+& (Join-Path $RepoRoot "scripts\_RUN_pie_agent_stress_v1.ps1") `
+  -RepoRoot $RepoRoot `
+  -Iterations $Iterations | Out-Host
 
 Write-Host "PIE_RUNTIME_STRESS_COMPLETE" -ForegroundColor Green
