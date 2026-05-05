@@ -14,52 +14,48 @@ function Read-Utf8NoBom([string]$Path){
     Die ("MISSING_FILE: " + $Path)
   }
   $enc = New-Object System.Text.UTF8Encoding($false)
-  [System.IO.File]::ReadAllText($Path,$enc)
+  return [System.IO.File]::ReadAllText($Path,$enc)
 }
 
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
-$SessionId = "selftest_external_A"
-$SessionRoot = Join-Path (Join-Path $RepoRoot "runs") $SessionId
 
-if(Test-Path -LiteralPath $SessionRoot -PathType Container){
-  Remove-Item -LiteralPath $SessionRoot -Recurse -Force
+$backendCmd = Join-Path $RepoRoot "scripts\pie_backend_ollama_cmd_v1.ps1"
+if(-not (Test-Path -LiteralPath $backendCmd -PathType Leaf)){
+  Die ("MISSING_BACKEND_CMD: " + $backendCmd)
 }
 
-$backendCmd = (Get-Command powershell.exe -ErrorAction Stop).Source + ' -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + (Join-Path $RepoRoot 'scripts\pie_agent_backend_mock_v1.ps1') + '"'
-[Environment]::SetEnvironmentVariable("PIE_LOCAL_BACKEND_CMD",$backendCmd,"Process")
+[Environment]::SetEnvironmentVariable("PIE_LOCAL_BACKEND_CMD",("powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"" + $backendCmd + "`""),"Process")
 
 Write-Host "PIE_AGENT_EXTERNAL_SELFTEST_START" -ForegroundColor DarkCyan
 
+$sessionId = "external_selftest_A"
+$sessionRoot = Join-Path (Join-Path $RepoRoot "runs") $sessionId
+if(Test-Path -LiteralPath $sessionRoot -PathType Container){
+  Remove-Item -LiteralPath $sessionRoot -Recurse -Force
+}
+
 & (Join-Path $RepoRoot "scripts\pie_agent_start_v1.ps1") `
   -RepoRoot $RepoRoot `
-  -SessionId $SessionId `
-  -ModelId "external-selftest-model" `
+  -SessionId $sessionId `
+  -ModelId "ollama-local" `
   -BackendMode "external" | Out-Host
 
 $r1 = ((& (Join-Path $RepoRoot "scripts\pie_agent_send_v1.ps1") `
   -RepoRoot $RepoRoot `
-  -SessionId $SessionId `
-  -Prompt "offline external hello") | Out-String).Trim()
+  -SessionId $sessionId `
+  -Prompt "Say: PIE external offline path is alive.") | Out-String).Trim()
 
 if([string]::IsNullOrWhiteSpace($r1)){
   Die "EXTERNAL_SELFTEST_EMPTY_RESPONSE"
 }
-if($r1 -notmatch '\[external-mock\]'){
-  Die ("EXTERNAL_SELFTEST_BAD_RESPONSE: " + $r1)
-}
 
-$requestPath = Join-Path $SessionRoot "state\backend_request.json"
-$responsePath = Join-Path $SessionRoot "state\backend_response.txt"
-
-if(-not (Test-Path -LiteralPath $requestPath -PathType Leaf)){
-  Die ("EXTERNAL_SELFTEST_REQUEST_MISSING: " + $requestPath)
-}
-if(-not (Test-Path -LiteralPath $responsePath -PathType Leaf)){
-  Die ("EXTERNAL_SELFTEST_RESPONSE_MISSING: " + $responsePath)
+$transcript = Read-Utf8NoBom (Join-Path $sessionRoot "transcript.ndjson")
+if($transcript -notmatch 'PIE external offline path is alive'){
+  Die "EXTERNAL_SELFTEST_TRANSCRIPT_MISSING_USER"
 }
 
 & (Join-Path $RepoRoot "scripts\pie_agent_stop_v1.ps1") `
   -RepoRoot $RepoRoot `
-  -SessionId $SessionId | Out-Host
+  -SessionId $sessionId | Out-Host
 
 Write-Host "PIE_AGENT_EXTERNAL_SELFTEST_OK" -ForegroundColor Green

@@ -1,7 +1,7 @@
 param(
   [Parameter(Mandatory=$true)][string]$RepoRoot,
-  [Parameter(Mandatory=$true)][string]$SessionId,
-  [Parameter(Mandatory=$true)][string]$ModelId,
+  [Parameter(Mandatory=$false)][string]$SessionId,
+  [Parameter(Mandatory=$false)][string]$ModelId = "local-default",
   [Parameter(Mandatory=$false)][string]$BackendMode = "mock"
 )
 
@@ -31,23 +31,6 @@ function Write-Utf8NoBomLf([string]$Path,[string]$Text){
   [System.IO.File]::WriteAllText($Path,$t,$enc)
 }
 
-function Append-Utf8NoBomLf([string]$Path,[string]$Text){
-  $dir = Split-Path -Parent $Path
-  if($dir){
-    Ensure-Dir $dir
-  }
-  $enc = New-Object System.Text.UTF8Encoding($false)
-  $existing = ""
-  if(Test-Path -LiteralPath $Path -PathType Leaf){
-    $existing = [System.IO.File]::ReadAllText($Path,$enc)
-  }
-  $append = $Text.Replace("`r`n","`n").Replace("`r","`n")
-  if(-not $append.EndsWith("`n")){
-    $append += "`n"
-  }
-  [System.IO.File]::WriteAllText($Path,($existing + $append),$enc)
-}
-
 function Escape-JsonString([string]$Value){
   if($null -eq $Value){
     return ""
@@ -61,24 +44,38 @@ function Escape-JsonString([string]$Value){
   return $s
 }
 
+function New-SessionId(){
+  $utc = [DateTime]::UtcNow.ToString("yyyyMMddTHHmmssZ")
+  $guid = [Guid]::NewGuid().ToString("N")
+  return ("session_" + $utc + "_" + $guid)
+}
+
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 
-$sessionRoot   = Join-Path (Join-Path $RepoRoot "runs") $SessionId
-$stateDir      = Join-Path $sessionRoot "state"
-$manifestPath  = Join-Path $sessionRoot "session_manifest.json"
-$statePath     = Join-Path $stateDir "session.state.json"
-$transcript    = Join-Path $sessionRoot "transcript.ndjson"
-$receipts      = Join-Path $sessionRoot "receipts.ndjson"
-$stdoutLog     = Join-Path $sessionRoot "stdout.log"
+if([string]::IsNullOrWhiteSpace($SessionId)){
+  $SessionId = New-SessionId
+}
 
-if(Test-Path -LiteralPath $sessionRoot -PathType Container){
+$runsRoot = Join-Path $RepoRoot "runs"
+$sessionRoot = Join-Path $runsRoot $SessionId
+$stateRoot = Join-Path $sessionRoot "state"
+
+Ensure-Dir $runsRoot
+Ensure-Dir $sessionRoot
+Ensure-Dir $stateRoot
+
+$manifestPath = Join-Path $sessionRoot "session_manifest.json"
+$transcriptPath = Join-Path $sessionRoot "transcript.ndjson"
+$receiptsPath = Join-Path $sessionRoot "receipts.ndjson"
+$stdoutPath = Join-Path $sessionRoot "stdout.log"
+$stderrPath = Join-Path $sessionRoot "stderr.log"
+$statePath = Join-Path $stateRoot "session.state.json"
+
+if(Test-Path -LiteralPath $manifestPath -PathType Leaf){
   Die ("SESSION_ALREADY_EXISTS: " + $SessionId)
 }
 
-Ensure-Dir $sessionRoot
-Ensure-Dir $stateDir
-
-$utc = [DateTime]::UtcNow.ToString("o")
+$startedUtc = [DateTime]::UtcNow.ToString("o")
 
 $manifest = @(
   "{"
@@ -86,8 +83,9 @@ $manifest = @(
   ('  "session_id":"' + (Escape-JsonString $SessionId) + '",')
   ('  "model_id":"' + (Escape-JsonString $ModelId) + '",')
   ('  "backend_mode":"' + (Escape-JsonString $BackendMode) + '",')
-  ('  "created_utc":"' + (Escape-JsonString $utc) + '",')
-  '  "status":"running"'
+  ('  "started_utc":"' + (Escape-JsonString $startedUtc) + '",')
+  '  "status":"open",'
+  '  "message_count":0'
   "}"
 ) -join "`n"
 
@@ -98,27 +96,27 @@ $state = @(
   ('  "model_id":"' + (Escape-JsonString $ModelId) + '",')
   ('  "backend_mode":"' + (Escape-JsonString $BackendMode) + '",')
   '  "message_count":0,'
-  '  "status":"running"'
+  '  "status":"open"'
   "}"
 ) -join "`n"
 
+$receipt = @(
+  "{"
+  '"schema":"pie.session.receipt.v1",'
+  '"event":"session_started",'
+  ('"session_id":"' + (Escape-JsonString $SessionId) + '",')
+  ('"utc":"' + (Escape-JsonString $startedUtc) + '",')
+  ('"model_id":"' + (Escape-JsonString $ModelId) + '",')
+  ('"backend_mode":"' + (Escape-JsonString $BackendMode) + '"')
+  "}"
+) -join ""
+
 Write-Utf8NoBomLf $manifestPath $manifest
 Write-Utf8NoBomLf $statePath $state
-Write-Utf8NoBomLf $transcript ""
-Write-Utf8NoBomLf $receipts (
-  @(
-    "{"
-    '"schema":"pie.session.receipt.v1",'
-    '"event":"session_start",'
-    ('"session_id":"' + (Escape-JsonString $SessionId) + '",')
-    ('"model_id":"' + (Escape-JsonString $ModelId) + '",')
-    ('"backend_mode":"' + (Escape-JsonString $BackendMode) + '",')
-    ('"utc":"' + (Escape-JsonString $utc) + '"')
-    "}"
-  ) -join ""
-)
-Write-Utf8NoBomLf $stdoutLog ("SESSION_START: " + $SessionId)
+Write-Utf8NoBomLf $transcriptPath ""
+Write-Utf8NoBomLf $receiptsPath $receipt
+Write-Utf8NoBomLf $stdoutPath ""
+Write-Utf8NoBomLf $stderrPath ""
 
 Write-Host ("PIE_AGENT_START_OK: " + $SessionId) -ForegroundColor Green
 Write-Host $sessionRoot
-$sessionRoot
