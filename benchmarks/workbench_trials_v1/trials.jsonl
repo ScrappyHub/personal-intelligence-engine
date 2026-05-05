@@ -1,0 +1,2 @@
+{"trial_id":"ps_strictmode_scalar_count_v1","must_include":["@(@(",".Count","StrictMode"],"weight":10}
+{"trial_id":"packet_optionA_manifest_rule_v1","must_include":["manifest.json","MUST NOT","packet_id.txt","SHA-256"],"weight":10}

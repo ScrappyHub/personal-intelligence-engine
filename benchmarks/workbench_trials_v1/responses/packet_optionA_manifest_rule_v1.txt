@@ -1,0 +1,1 @@
+manifest.json MUST NOT contain packet_id and packet_id.txt is SHA-256.
