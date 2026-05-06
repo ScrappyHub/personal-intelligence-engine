@@ -1,116 +1,163 @@
 param(
-  [Parameter(Mandatory=$false, Position=0)]
-  [ValidateSet("help","chat","pull","models","doc","image")]
-  [string]$Command = "chat",
+  [Parameter(Position=0)][string]$Command = "help",
 
-  [Parameter(Mandatory=$false)]
+  [string]$RepoRoot = ".",
   [string]$SessionId = "pie_chat",
-
-  [Parameter(Mandatory=$false)]
   [string]$Model = "qwen2.5-coder:7b",
-
-  [Parameter(Mandatory=$false)]
-  [string]$RepoRoot = $PSScriptRoot,
-
-  [Parameter(Mandatory=$false)]
-  [string]$Path,
-
-  [Parameter(Mandatory=$false)]
-  [string]$AttachPath
+  [string]$Backend = "ollama",
+  [string]$Profile = "core",
+  [string]$Mode = "",
+  [string]$Path = "",
+  [string]$Hash = "",
+  [string]$Text = "",
+  [string]$Lane = "active",
+  [string]$Project = "",
+  [string]$ProjectRepo = "",
+  [string]$TargetRepo = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
+$Scripts = Join-Path $RepoRoot "scripts"
 
-function Show-Help {
-  Write-Host ""
-  Write-Host "PIE CLI" -ForegroundColor Cyan
-  Write-Host ""
+function Invoke-PieScript {
+  param(
+    [Parameter(Mandatory=$true)][string]$Script,
+    [Parameter(Mandatory=$false)][string[]]$Args = @()
+  )
 
-  Write-Host "Commands:"
-  Write-Host "  .\pie.ps1 help"
-  Write-Host "  .\pie.ps1 models"
-  Write-Host "  .\pie.ps1 pull  -Model qwen2.5-coder:7b"
-  Write-Host "  .\pie.ps1 chat  -SessionId my_chat -Model qwen2.5-coder:7b"
-  Write-Host "  .\pie.ps1 chat  -AttachPath C:\path\file.txt"
-  Write-Host "  .\pie.ps1 doc   -Path C:\path\document.txt"
-  Write-Host "  .\pie.ps1 image -Path C:\path\image.png"
-
-  Write-Host ""
-  Write-Host "Chat Commands:"
-  Write-Host "  /exit"
-  Write-Host "  /drop"
-  Write-Host "  /new <sessionId>"
-  Write-Host ""
-}
-
-if($Command -eq "help"){
-  Show-Help
-  exit 0
-}
-
-if($Command -eq "models"){
-  ollama list
-  exit 0
-}
-
-if($Command -eq "pull"){
-  ollama pull $Model
-  exit $LASTEXITCODE
-}
-
-if($Command -eq "doc"){
-
-  if([string]::IsNullOrWhiteSpace($Path)){
-    throw "PIE_DOC_PATH_REQUIRED"
+  $ScriptPath = Join-Path $Scripts $Script
+  if(-not (Test-Path -LiteralPath $ScriptPath -PathType Leaf)){
+    throw ("PIE_CLI_SCRIPT_MISSING: " + $ScriptPath)
   }
 
-  $Full = (Resolve-Path -LiteralPath $Path).Path
-
-  $Text = [System.IO.File]::ReadAllText($Full)
-
-  powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
-    -File (Join-Path $RepoRoot "scripts\pie_agent_send_v1.ps1") `
-    -RepoRoot $RepoRoot `
-    -SessionId $SessionId `
-    -Message ("Read and summarize this document.`nPATH: " + $Full + "`n`n" + $Text)
-
-  exit $LASTEXITCODE
+  & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $ScriptPath @Args
+  if($LASTEXITCODE -ne 0){
+    throw ("PIE_CLI_CHILD_FAIL: " + $Script)
+  }
 }
 
-if($Command -eq "image"){
-
-  if([string]::IsNullOrWhiteSpace($Path)){
-    throw "PIE_IMAGE_PATH_REQUIRED"
+switch($Command.ToLowerInvariant()){
+  "help" {
+    Write-Host ""
+    Write-Host "PIE CLI" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Core:"
+    Write-Host "  .\pie.ps1 help"
+    Write-Host "  .\pie.ps1 setup -Profile core"
+    Write-Host "  .\pie.ps1 models"
+    Write-Host "  .\pie.ps1 pull -Model qwen2.5-coder:7b"
+    Write-Host "  .\pie.ps1 chat -SessionId my_chat -Model qwen2.5-coder:7b"
+    Write-Host ""
+    Write-Host "Documents:"
+    Write-Host "  .\pie.ps1 doc -Path C:\path\file.txt"
+    Write-Host "  .\pie.ps1 image -Path C:\path\image.png"
+    Write-Host ""
+    Write-Host "Memory:"
+    Write-Host "  .\pie.ps1 memory-policy"
+    Write-Host "  .\pie.ps1 memory-policy -Mode ask"
+    Write-Host "  .\pie.ps1 memory-policy -Mode auto_accept"
+    Write-Host "  .\pie.ps1 memory-accept -Text `"Remember this`" -Lane active"
+    Write-Host "  .\pie.ps1 memory-accept -Text `"Project rule`" -Lane project -Project pie"
+    Write-Host ""
+    Write-Host "Saved Conversations:"
+    Write-Host "  .\pie.ps1 save -SessionId my_chat"
+    Write-Host "  .\pie.ps1 open -Hash <conversation_hash>"
+    Write-Host ""
+    Write-Host "Repo Init / Verify:"
+    Write-Host "  .\pie.ps1 init -TargetRepo C:\path\repo -Project my_project -Profile coding"
+    Write-Host "  .\pie.ps1 verify-init -TargetRepo C:\path\repo"
+    Write-Host ""
+    Write-Host "Chat Commands:"
+    Write-Host "  /exit"
+    Write-Host "  /drop"
+    Write-Host "  /new <sessionId>"
+    Write-Host ""
+    return
   }
 
-  $Full = (Resolve-Path -LiteralPath $Path).Path
-
-  powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
-    -File (Join-Path $RepoRoot "scripts\pie_agent_send_v1.ps1") `
-    -RepoRoot $RepoRoot `
-    -SessionId $SessionId `
-    -Message ("Image path received for future multimodal support: " + $Full)
-
-  exit $LASTEXITCODE
-}
-
-if($Command -eq "chat"){
-
-  if(-not [string]::IsNullOrWhiteSpace($AttachPath)){
-    $FullAttach = (Resolve-Path -LiteralPath $AttachPath).Path
-    Write-Host ("PIE_ATTACH_PATH: " + $FullAttach) -ForegroundColor DarkCyan
+  "setup" {
+    Invoke-PieScript -Script "pie_setup_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-Profile",$Profile)
+    return
   }
 
-  powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File (Join-Path $RepoRoot "scripts\pie_chat_v1.ps1") `
-    -RepoRoot $RepoRoot `
-    -SessionId $SessionId `
-    -Model $Model
+  "models" {
+    & ollama list
+    return
+  }
 
-  exit $LASTEXITCODE
+  "pull" {
+    if([string]::IsNullOrWhiteSpace($Model)){ throw "PIE_CLI_MODEL_REQUIRED" }
+    & ollama pull $Model
+    if($LASTEXITCODE -ne 0){ throw ("PIE_MODEL_PULL_FAIL: " + $Model) }
+    return
+  }
+
+  "chat" {
+    Invoke-PieScript -Script "pie_chat_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Model",$Model)
+    return
+  }
+
+  "doc" {
+    if([string]::IsNullOrWhiteSpace($Path)){ throw "PIE_DOC_PATH_REQUIRED" }
+    $Msg = "Summarize this document and identify actionable next steps:`n`n" + (Get-Content -LiteralPath $Path -Raw)
+    Invoke-PieScript -Script "pie_agent_send_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Message",$Msg)
+    return
+  }
+
+  "image" {
+    if([string]::IsNullOrWhiteSpace($Path)){ throw "PIE_IMAGE_PATH_REQUIRED" }
+    $Msg = "Image path attached for local review: " + $Path + "`nDescribe what should be done with this image. If the current backend cannot inspect pixels, say so clearly."
+    Invoke-PieScript -Script "pie_agent_send_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Message",$Msg)
+    return
+  }
+
+  "memory-policy" {
+    if([string]::IsNullOrWhiteSpace($Mode)){
+      Invoke-PieScript -Script "pie_memory_policy_v1.ps1" -Args @("-RepoRoot",$RepoRoot)
+    } else {
+      Invoke-PieScript -Script "pie_memory_policy_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-Mode",$Mode)
+    }
+    return
+  }
+
+  "memory-accept" {
+    if([string]::IsNullOrWhiteSpace($Text)){ throw "PIE_MEMORY_TEXT_REQUIRED" }
+
+    $args = @("-RepoRoot",$RepoRoot,"-Text",$Text,"-Lane",$Lane)
+    if(-not [string]::IsNullOrWhiteSpace($Project)){ $args += @("-Project",$Project) }
+    if(-not [string]::IsNullOrWhiteSpace($ProjectRepo)){ $args += @("-ProjectRepo",$ProjectRepo) }
+
+    Invoke-PieScript -Script "pie_memory_accept_v1.ps1" -Args $args
+    return
+  }
+
+  "save" {
+    Invoke-PieScript -Script "pie_conversation_save_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId)
+    return
+  }
+
+  "open" {
+    if([string]::IsNullOrWhiteSpace($Hash)){ throw "PIE_CONVERSATION_HASH_REQUIRED" }
+    Invoke-PieScript -Script "pie_conversation_open_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-ConversationHash",$Hash,"-SessionId",$SessionId)
+    return
+  }
+
+  "init" {
+    if([string]::IsNullOrWhiteSpace($TargetRepo)){ $TargetRepo = (Get-Location).Path }
+    Invoke-PieScript -Script "pie_init_repo_v1.ps1" -Args @("-TargetRepo",$TargetRepo,"-Project",$Project,"-Intent",$Profile)
+    return
+  }
+
+  "verify-init" {
+    if([string]::IsNullOrWhiteSpace($TargetRepo)){ $TargetRepo = (Get-Location).Path }
+    Invoke-PieScript -Script "pie_verify_init_v1.ps1" -Args @("-TargetRepo",$TargetRepo)
+    return
+  }
+
+  default {
+    throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
+  }
 }
-
-throw ("PIE_UNKNOWN_COMMAND: " + $Command)
