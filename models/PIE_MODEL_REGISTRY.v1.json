@@ -1,0 +1,29 @@
+﻿{
+  "schema": "pie.model.registry.v1",
+  "profiles": {
+    "core": {
+      "description": "Balanced local coding and general assistant profile.",
+      "models": [
+        "qwen2.5-coder:7b"
+      ]
+    },
+    "fast": {
+      "description": "Smaller faster local assistant profile.",
+      "models": [
+        "qwen2.5:3b"
+      ]
+    },
+    "coding": {
+      "description": "Coding-focused local assistant profile.",
+      "models": [
+        "qwen2.5-coder:7b"
+      ]
+    },
+    "general": {
+      "description": "General local assistant profile.",
+      "models": [
+        "llama3.1:8b"
+      ]
+    }
+  }
+}
