@@ -1,0 +1,37 @@
+﻿{
+  "schema": "pie.intent.profiles.v1",
+  "profiles": {
+    "coding": {
+      "description": "Strict coding assistant with language rules, repo memory, and test-first behavior.",
+      "default_model": "qwen2.5-coder:7b",
+      "memory_lanes": ["coding", "active", "project"],
+      "rules": [
+        "Prefer correct runnable code.",
+        "Ask before destructive changes.",
+        "Use detected language profile rules.",
+        "Preserve deterministic receipts when working in PIE-enabled repos."
+      ]
+    },
+    "general": {
+      "description": "General local assistant profile.",
+      "default_model": "llama3.1:8b",
+      "memory_lanes": ["active"]
+    },
+    "research": {
+      "description": "Local research/workbench profile with source-aware summaries.",
+      "default_model": "qwen2.5:3b",
+      "memory_lanes": ["active", "project"]
+    },
+    "repo-maintainer": {
+      "description": "Repository maintenance profile with strict project memory and rule locking.",
+      "default_model": "qwen2.5-coder:7b",
+      "memory_lanes": ["coding", "project"],
+      "rules": [
+        "Prefer parse-gated patches.",
+        "Prefer one-command runners.",
+        "Keep public language clean.",
+        "Do not mix project memory without confirmation."
+      ]
+    }
+  }
+}

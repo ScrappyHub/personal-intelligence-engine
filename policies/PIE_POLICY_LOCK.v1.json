@@ -1,0 +1,11 @@
+﻿{
+  "schema": "pie.policy.lock.v1",
+  "policy_mode": "owner_locked",
+  "description": "Owner-locked local runtime policy. Normal profiles may change model, intent, and memory lane, but locked policy requires owner authorization.",
+  "locked_controls": [
+    "policy_mode",
+    "restricted_behavior_overrides",
+    "owner_key_rotation",
+    "default_safety_floor"
+  ]
+}
