@@ -1,0 +1,9 @@
+﻿{
+  "schema": "pie.memory.policy.v1",
+  "mode": "ask",
+  "allowed_modes": ["ask", "auto_accept", "manual_only", "off"],
+  "default_lane": "active",
+  "repo_memory_enabled": true,
+  "project_memory_enabled": true,
+  "coding_memory_enabled": true
+}
