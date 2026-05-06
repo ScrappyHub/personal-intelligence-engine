@@ -1,0 +1,12 @@
+﻿{
+  "schema": "pie.workbench.contracts.v1",
+  "contracts": [
+    "pie.session.v1",
+    "pie.memory.v1",
+    "pie.project.v1",
+    "pie.adapter.contract.v1",
+    "pie.benchmark.result.v1",
+    "pie.conversation.archive.v1"
+  ],
+  "public_release_rule": "Workbench must call stable CLI/backend contracts, not private scratch scripts."
+}

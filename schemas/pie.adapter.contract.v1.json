@@ -1,0 +1,25 @@
+﻿{
+  "schema": "pie.adapter.contract.v1",
+  "description": "Common contract for all PIE model backends.",
+  "required_methods": ["health", "list_models", "pull_model", "generate"],
+  "request": {
+    "model": "string",
+    "prompt": "string",
+    "system": "string",
+    "memory_context": "string",
+    "attachments": [],
+    "options": {
+      "temperature": "number",
+      "top_p": "number",
+      "max_tokens": "integer"
+    }
+  },
+  "response": {
+    "ok": "boolean",
+    "model": "string",
+    "response": "string",
+    "elapsed_ms": "integer",
+    "error_code": "string",
+    "error_message": "string"
+  }
+}

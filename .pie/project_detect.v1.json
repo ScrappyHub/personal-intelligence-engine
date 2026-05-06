@@ -1,0 +1,9 @@
+{
+    "schema":  "pie.project.detect.v1",
+    "repo":  "C:\\dev\\pie",
+    "signals":  [
+                    "git",
+                    "powershell"
+                ],
+    "generated_utc":  "2026-05-06T23:50:08.7975492Z"
+}
