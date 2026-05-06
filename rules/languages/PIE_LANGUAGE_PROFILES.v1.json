@@ -1,0 +1,114 @@
+﻿{
+  "schema": "pie.language.profile.registry.v1",
+  "profiles": {
+    "powershell": {
+      "extensions": [".ps1", ".psm1", ".psd1"],
+      "rules": [
+        "Use PowerShell 5.1-compatible syntax unless explicitly told otherwise.",
+        "Use Set-StrictMode -Version Latest.",
+        "Use UTF-8 no BOM + LF.",
+        "Parse-gate scripts before execution.",
+        "Never rely on scalar pipeline .Count; use @(@(...)).Count.",
+        "Use clear deterministic error tokens."
+      ],
+      "test_commands": [
+        "[System.Management.Automation.Language.Parser]::ParseFile($Path,[ref]$tok,[ref]$err)"
+      ]
+    },
+    "bash": {
+      "extensions": [".sh", ".bash"],
+      "rules": [
+        "Use POSIX-safe shell where possible.",
+        "Use set -euo pipefail for bash scripts.",
+        "Quote variables.",
+        "Avoid destructive commands without explicit target checks.",
+        "Emit clear deterministic error tokens."
+      ]
+    },
+    "python": {
+      "extensions": [".py"],
+      "rules": [
+        "Prefer type hints.",
+        "Use pathlib for paths.",
+        "Use argparse for CLI scripts.",
+        "Use deterministic output when generating artifacts.",
+        "Prefer pytest-compatible tests."
+      ]
+    },
+    "javascript": {
+      "extensions": [".js", ".mjs", ".cjs"],
+      "rules": [
+        "Prefer explicit error handling.",
+        "Avoid hidden global state.",
+        "Use deterministic JSON serialization where needed."
+      ]
+    },
+    "typescript": {
+      "extensions": [".ts", ".tsx"],
+      "rules": [
+        "Use strict TypeScript.",
+        "Prefer typed interfaces for schemas.",
+        "Avoid any unless justified.",
+        "Keep UI state explicit and testable."
+      ]
+    },
+    "java": {
+      "extensions": [".java"],
+      "rules": [
+        "Use clear package structure.",
+        "Prefer immutable data where practical.",
+        "Use explicit exception types.",
+        "Keep IO boundaries testable."
+      ]
+    },
+    "csharp": {
+      "extensions": [".cs"],
+      "rules": [
+        "Use nullable reference types where possible.",
+        "Prefer explicit async handling.",
+        "Keep deterministic filesystem and JSON behavior."
+      ]
+    },
+    "go": {
+      "extensions": [".go"],
+      "rules": [
+        "Return errors explicitly.",
+        "Use gofmt.",
+        "Keep CLI behavior deterministic.",
+        "Prefer table-driven tests."
+      ]
+    },
+    "rust": {
+      "extensions": [".rs"],
+      "rules": [
+        "Prefer Result over panic for recoverable errors.",
+        "Use cargo fmt and cargo test.",
+        "Keep IO and parsing errors explicit."
+      ]
+    },
+    "sql": {
+      "extensions": [".sql"],
+      "rules": [
+        "Use idempotent migrations where possible.",
+        "Name policies/functions deterministically.",
+        "Include negative tests for RLS and permission behavior."
+      ]
+    },
+    "docker": {
+      "extensions": ["Dockerfile", ".dockerfile"],
+      "rules": [
+        "Pin base images where practical.",
+        "Minimize layers.",
+        "Avoid embedding secrets."
+      ]
+    },
+    "json_yaml": {
+      "extensions": [".json", ".yaml", ".yml"],
+      "rules": [
+        "Use stable key order for canonical artifacts.",
+        "Avoid comments in JSON.",
+        "Validate against schemas when available."
+      ]
+    }
+  }
+}
