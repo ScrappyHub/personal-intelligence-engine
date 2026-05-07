@@ -8,6 +8,11 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
+
+if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){
+  throw ("PIE_ATTACH_SOURCE_NOT_FOUND: " + $Path)
+}
+
 $Source = (Resolve-Path -LiteralPath $Path).Path
 $RunRoot = Join-Path $RepoRoot ("runs\" + $SessionId)
 $AttachRoot = Join-Path $RunRoot "attachments"
@@ -20,9 +25,9 @@ Copy-Item -LiteralPath $Source -Destination $Dest -Force
 
 $Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Dest).Hash.ToLowerInvariant()
 $MetaPath = Join-Path $AttachRoot "attachments.ndjson"
+$EscDest = $Dest.Replace('\','\\')
 
-$Line = '{"schema":"pie.attachment.v1","session_id":"' + $SessionId + '","path":"' + ($Dest.Replace('\','\\')) + '","sha256":"' + $Hash + '","created_utc":"' + [DateTime]::UtcNow.ToString("o") + '"}' + "`n"
-
+$Line = '{"schema":"pie.attachment.v1","session_id":"' + $SessionId + '","path":"' + $EscDest + '","sha256":"' + $Hash + '","created_utc":"' + [DateTime]::UtcNow.ToString("o") + '"}' + "`n"
 [System.IO.File]::AppendAllText($MetaPath,$Line,(New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host ("PIE_ATTACH_OK: " + $Dest) -ForegroundColor Green

@@ -69,6 +69,7 @@ function Show-Help {
   Write-Host "  models         List local models"
   Write-Host "  pull           Download a model"
   Write-Host "  chat           Start local chat"
+  Write-Host "  ask            Ask PIE once using session memory/attachments"
   Write-Host "  doc            Send a document to PIE"
   Write-Host "  image          Send an image path to PIE"
   Write-Host "  attach         Attach a file/image to a session"
@@ -151,6 +152,26 @@ switch($Command.ToLowerInvariant()){
     return
   }
 
+
+  "ask" {
+    if([string]::IsNullOrWhiteSpace($Text)){
+      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){
+        $Text = $Subcommand
+      } else {
+        throw "PIE_ASK_TEXT_REQUIRED"
+      }
+    }
+
+    Invoke-PieScript `
+      -Script "pie_ask_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Message",$Text
+      )
+
+    return
+  }
   "chat" {
 
     Invoke-PieScript `
@@ -472,5 +493,6 @@ switch($Command.ToLowerInvariant()){
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
 
 
