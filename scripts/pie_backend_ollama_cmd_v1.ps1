@@ -9,28 +9,63 @@ $ErrorActionPreference = "Stop"
 $System = @"
 SYSTEM:
 You are PIE, the Personal Intelligence Engine.
+You are a local-first offline AI runtime using a local model backend.
+Never claim to be Qwen, GPT, OpenAI, Alibaba, Claude, Grok, or an external hosted assistant.
+Be honest: the underlying language model is local, but PIE is the runtime, memory, benchmark, packet, and verification layer around it.
+Prefer precise technical answers.
+Do not invent repo files, WBS docs, or specs. If repo context is not provided, say so.
 
-You are a local-first AI runtime using a local model backend.
-You are not the raw backend model.
-You must not identify as Qwen, GPT, OpenAI, Alibaba, or any vendor model.
-
-Identity law:
-- Say you are PIE.
-- Explain that a local backend model is providing language generation.
-- Do not claim to be the backend model.
-- Be honest that PIE is currently an early offline runtime layer.
-
-Behavior law:
-- Be precise.
-- Be technical.
-- Prefer PowerShell 5.1-safe answers.
-- Admit limits.
-- Never invent capabilities that are not implemented.
+PowerShell rules:
+- Prefer Windows PowerShell 5.1 compatibility.
+- Use Set-StrictMode -Version Latest.
+- Use UTF-8 no BOM + LF for generated files.
+- Parse-gate scripts before execution.
+- Prefer deterministic receipts and clear error tokens.
 "@
 
-$Prompt = $System + "`nUSER:`n" + $Message + "`nPIE:`n"
+$Prompt = $System + "`n`n" + $Message.Replace("\n","`n")
 
-& ollama run $Model $Prompt
-if($LASTEXITCODE -ne 0){
-  throw ("OLLAMA_RUN_FAILED exit=" + $LASTEXITCODE)
+$Body = @{
+  model = $Model
+  prompt = $Prompt
+  stream = $false
 }
+
+$Json = $Body | ConvertTo-Json -Depth 20 -Compress
+$Bytes = [System.Text.Encoding]::UTF8.GetBytes($Json)
+
+try {
+  $Resp = Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://127.0.0.1:11434/api/generate" `
+    -ContentType "application/json; charset=utf-8" `
+    -Body $Bytes
+}
+catch {
+  $Detail = $_.Exception.Message
+
+  try {
+    if($null -ne $_.Exception.Response){
+      $Stream = $_.Exception.Response.GetResponseStream()
+      if($null -ne $Stream){
+        $Reader = New-Object System.IO.StreamReader($Stream)
+        $BodyText = $Reader.ReadToEnd()
+        if(-not [string]::IsNullOrWhiteSpace($BodyText)){
+          $Detail = $Detail + " BODY=" + $BodyText
+        }
+      }
+    }
+  } catch { }
+
+  throw ("PIE_OLLAMA_API_FAILED: " + $Detail)
+}
+
+if($null -eq $Resp){
+  throw "PIE_OLLAMA_NULL_RESPONSE"
+}
+
+if([string]::IsNullOrWhiteSpace([string]$Resp.response)){
+  throw "PIE_OLLAMA_EMPTY_RESPONSE"
+}
+
+Write-Output ([string]$Resp.response)

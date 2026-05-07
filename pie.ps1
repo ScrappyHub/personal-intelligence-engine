@@ -16,6 +16,8 @@ param(
   [string]$ProjectRepo = "",
   [string]$TargetRepo = "",
   [string]$Prompt = "",
+  [string]$Goal = "",
+  [switch]$NewSettings,
   [switch]$PullMissing,
   [switch]$LastResults,
   [switch]$Scorecard,
@@ -41,6 +43,25 @@ function Invoke-PieScript {
   }
 
   & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $ScriptPath @Args
+
+  if($LASTEXITCODE -ne 0){
+    throw ("PIE_CLI_CHILD_FAIL: " + $Script)
+  }
+}
+
+function Invoke-PieInteractiveScript {
+  param(
+    [Parameter(Mandatory=$true)][string]$Script,
+    [Parameter(Mandatory=$false)][string[]]$Args = @()
+  )
+
+  $ScriptPath = Join-Path $Scripts $Script
+
+  if(-not (Test-Path -LiteralPath $ScriptPath -PathType Leaf)){
+    throw ("PIE_CLI_SCRIPT_MISSING: " + $ScriptPath)
+  }
+
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ScriptPath @Args
 
   if($LASTEXITCODE -ne 0){
     throw ("PIE_CLI_CHILD_FAIL: " + $Script)
@@ -80,6 +101,12 @@ function Show-Help {
   Write-Host "  show            Show latest benchmark/model results"
   Write-Host "  verify-runtime  Verify PIE runtime command surface"
   Write-Host ""
+  Write-Host "Examples:"
+  Write-Host "  pie chat"
+  Write-Host "  pie chat -NewSettings"
+  Write-Host "  pie chat -SessionId my_chat -Goal `"Patch and test the memory resolver.`""
+  Write-Host "  pie ask -SessionId my_chat -Text `"What is my current chat goal?`""
+  Write-Host ""
 }
 
 function Show-MemoryHelp {
@@ -99,167 +126,405 @@ function Show-MemoryHelp {
 
 switch($Command.ToLowerInvariant()){
 
-  "help" { Show-Help; return }
-
-  "setup" {
-    Invoke-PieScript -Script "pie_setup_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-Profile",$Profile)
+  "help" {
+    Show-Help
     return
   }
 
-  "models" { & ollama list; return }
+  "setup" {
+    Invoke-PieScript `
+      -Script "pie_setup_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-Profile",$Profile
+      )
+    return
+  }
+
+  "models" {
+    & ollama list
+    return
+  }
 
   "pull" {
-    if([string]::IsNullOrWhiteSpace($Model)){ throw "PIE_CLI_MODEL_REQUIRED" }
+    if([string]::IsNullOrWhiteSpace($Model)){
+      throw "PIE_CLI_MODEL_REQUIRED"
+    }
+
     & ollama pull $Model
-    if($LASTEXITCODE -ne 0){ throw ("PIE_MODEL_PULL_FAIL: " + $Model) }
+
+    if($LASTEXITCODE -ne 0){
+      throw ("PIE_MODEL_PULL_FAIL: " + $Model)
+    }
+
     return
   }
 
   "chat" {
-    Invoke-PieScript -Script "pie_chat_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Model",$Model)
+
+    $A = @(
+      "-RepoRoot",$RepoRoot,
+      "-SessionId",$SessionId,
+      "-Model",$Model
+    )
+
+    if(-not [string]::IsNullOrWhiteSpace($Goal)){
+      $A += @("-Goal",$Goal)
+    }
+
+    if($NewSettings){
+      $A += "-NewSettings"
+    }
+
+    Invoke-PieInteractiveScript `
+      -Script "pie_chat_v1.ps1" `
+      -Args $A
+
     return
   }
 
   "ask" {
     if([string]::IsNullOrWhiteSpace($Text)){
-      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){ $Text = $Subcommand } else { throw "PIE_ASK_TEXT_REQUIRED" }
+      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){
+        $Text = $Subcommand
+      } else {
+        throw "PIE_ASK_TEXT_REQUIRED"
+      }
     }
-    Invoke-PieScript -Script "pie_ask_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Message",$Text)
+
+    Invoke-PieScript `
+      -Script "pie_ask_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Message",$Text
+      )
+
     return
   }
 
   "doc" {
-    if([string]::IsNullOrWhiteSpace($Path)){ throw "PIE_DOC_PATH_REQUIRED" }
+    if([string]::IsNullOrWhiteSpace($Path)){
+      throw "PIE_DOC_PATH_REQUIRED"
+    }
+
     $Msg = "Summarize this document and identify actionable next steps:`n`n" + (Get-Content -LiteralPath $Path -Raw)
-    Invoke-PieScript -Script "pie_agent_send_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Message",$Msg)
+
+    Invoke-PieScript `
+      -Script "pie_agent_send_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Message",$Msg
+      )
+
     return
   }
 
   "image" {
-    if([string]::IsNullOrWhiteSpace($Path)){ throw "PIE_IMAGE_PATH_REQUIRED" }
+    if([string]::IsNullOrWhiteSpace($Path)){
+      throw "PIE_IMAGE_PATH_REQUIRED"
+    }
+
     $Msg = "Image path attached for local review: " + $Path + "`nIf the backend cannot inspect pixels, say so clearly."
-    Invoke-PieScript -Script "pie_agent_send_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Message",$Msg)
+
+    Invoke-PieScript `
+      -Script "pie_agent_send_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Message",$Msg
+      )
+
     return
   }
 
   "attach" {
-    if([string]::IsNullOrWhiteSpace($Path)){ throw "PIE_ATTACH_PATH_REQUIRED" }
-    Invoke-PieScript -Script "pie_attach_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Path",$Path)
+    if([string]::IsNullOrWhiteSpace($Path)){
+      throw "PIE_ATTACH_PATH_REQUIRED"
+    }
+
+    Invoke-PieScript `
+      -Script "pie_attach_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Path",$Path
+      )
+
     return
   }
 
   "vision" {
-    if([string]::IsNullOrWhiteSpace($Prompt)){ $Prompt = "Describe the attached image clearly and concisely." }
-    Invoke-PieScript -Script "pie_vision_ollama_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Model",$Model,"-Prompt",$Prompt)
+    if([string]::IsNullOrWhiteSpace($Prompt)){
+      $Prompt = "Describe the attached image clearly and concisely."
+    }
+
+    Invoke-PieScript `
+      -Script "pie_vision_ollama_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Model",$Model,
+        "-Prompt",$Prompt
+      )
+
     return
   }
 
   "vision-correct" {
     if([string]::IsNullOrWhiteSpace($Text)){
-      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){ $Text = $Subcommand } else { throw "PIE_VISION_CORRECTION_TEXT_REQUIRED" }
+      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){
+        $Text = $Subcommand
+      } else {
+        throw "PIE_VISION_CORRECTION_TEXT_REQUIRED"
+      }
     }
-    Invoke-PieScript -Script "pie_vision_correct_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Text",$Text)
+
+    Invoke-PieScript `
+      -Script "pie_vision_correct_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Text",$Text
+      )
+
     return
   }
 
   "generate-image" {
-    if([string]::IsNullOrWhiteSpace($Prompt)){ throw "PIE_IMAGE_PROMPT_REQUIRED" }
-    Invoke-PieScript -Script "pie_generate_image_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Prompt",$Prompt,"-Backend",$Backend)
+    if([string]::IsNullOrWhiteSpace($Prompt)){
+      throw "PIE_IMAGE_PROMPT_REQUIRED"
+    }
+
+    Invoke-PieScript `
+      -Script "pie_generate_image_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Prompt",$Prompt,
+        "-Backend",$Backend
+      )
+
     return
   }
 
   "memory" {
     switch($Subcommand.ToLowerInvariant()){
-      "" { Show-MemoryHelp; return }
-      "help" { Show-MemoryHelp; return }
+
+      "" {
+        Show-MemoryHelp
+        return
+      }
+
+      "help" {
+        Show-MemoryHelp
+        return
+      }
 
       "policy" {
         if([string]::IsNullOrWhiteSpace($Mode)){
-          Invoke-PieScript -Script "pie_memory_policy_v1.ps1" -Args @("-RepoRoot",$RepoRoot)
+          Invoke-PieScript `
+            -Script "pie_memory_policy_v1.ps1" `
+            -Args @("-RepoRoot",$RepoRoot)
         } else {
-          Invoke-PieScript -Script "pie_memory_policy_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-Mode",$Mode)
+          Invoke-PieScript `
+            -Script "pie_memory_policy_v1.ps1" `
+            -Args @(
+              "-RepoRoot",$RepoRoot,
+              "-Mode",$Mode
+            )
         }
+
         return
       }
 
       "accept" {
-        if([string]::IsNullOrWhiteSpace($Text)){ throw "PIE_MEMORY_TEXT_REQUIRED" }
-        $A = @("-RepoRoot",$RepoRoot,"-Text",$Text,"-Lane",$Lane)
-        if(-not [string]::IsNullOrWhiteSpace($Project)){ $A += @("-Project",$Project) }
-        if(-not [string]::IsNullOrWhiteSpace($ProjectRepo)){ $A += @("-ProjectRepo",$ProjectRepo) }
-        Invoke-PieScript -Script "pie_memory_accept_v1.ps1" -Args $A
+        if([string]::IsNullOrWhiteSpace($Text)){
+          throw "PIE_MEMORY_TEXT_REQUIRED"
+        }
+
+        $A = @(
+          "-RepoRoot",$RepoRoot,
+          "-Text",$Text,
+          "-Lane",$Lane
+        )
+
+        if(-not [string]::IsNullOrWhiteSpace($Project)){
+          $A += @("-Project",$Project)
+        }
+
+        if(-not [string]::IsNullOrWhiteSpace($ProjectRepo)){
+          $A += @("-ProjectRepo",$ProjectRepo)
+        }
+
+        Invoke-PieInteractiveScript `
+          -Script "pie_memory_accept_v1.ps1" `
+          -Args $A
+
         return
       }
 
-      default { throw ("PIE_MEMORY_UNKNOWN_COMMAND: " + $Subcommand) }
+      default {
+        throw ("PIE_MEMORY_UNKNOWN_COMMAND: " + $Subcommand)
+      }
     }
   }
 
   "policy" {
-    if([string]::IsNullOrWhiteSpace($Mode)){ throw "PIE_POLICY_EVENT_REQUIRED_USE_MODE" }
-
-    if([string]::IsNullOrWhiteSpace($Text)){
-      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){ $Text = $Subcommand }
+    if([string]::IsNullOrWhiteSpace($Mode)){
+      throw "PIE_POLICY_EVENT_REQUIRED_USE_MODE"
     }
 
-    Invoke-PieScript -Script "pie_policy_decide_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-Event",$Mode,"-Project",$Project,"-Text",$Text)
+    if([string]::IsNullOrWhiteSpace($Text)){
+      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){
+        $Text = $Subcommand
+      }
+    }
+
+    Invoke-PieScript `
+      -Script "pie_policy_decide_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-Event",$Mode,
+        "-Project",$Project,
+        "-Text",$Text
+      )
+
     return
   }
 
   "save" {
-    Invoke-PieScript -Script "pie_conversation_save_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId)
+    Invoke-PieScript `
+      -Script "pie_conversation_save_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId
+      )
+
     return
   }
 
   "open" {
-    if([string]::IsNullOrWhiteSpace($Hash)){ throw "PIE_CONVERSATION_HASH_REQUIRED" }
-    Invoke-PieScript -Script "pie_conversation_open_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-ConversationHash",$Hash,"-SessionId",$SessionId)
+    if([string]::IsNullOrWhiteSpace($Hash)){
+      throw "PIE_CONVERSATION_HASH_REQUIRED"
+    }
+
+    Invoke-PieScript `
+      -Script "pie_conversation_open_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-ConversationHash",$Hash,
+        "-SessionId",$SessionId
+      )
+
     return
   }
 
   "init" {
-    if([string]::IsNullOrWhiteSpace($TargetRepo)){ $TargetRepo = (Get-Location).Path }
-    Invoke-PieScript -Script "pie_init_repo_v1.ps1" -Args @("-TargetRepo",$TargetRepo,"-Project",$Project,"-Intent",$Profile)
+    if([string]::IsNullOrWhiteSpace($TargetRepo)){
+      $TargetRepo = (Get-Location).Path
+    }
+
+    Invoke-PieScript `
+      -Script "pie_init_repo_v1.ps1" `
+      -Args @(
+        "-TargetRepo",$TargetRepo,
+        "-Project",$Project,
+        "-Intent",$Profile
+      )
+
     return
   }
 
   "verify" {
-    if([string]::IsNullOrWhiteSpace($TargetRepo)){ $TargetRepo = (Get-Location).Path }
-    Invoke-PieScript -Script "pie_verify_init_v1.ps1" -Args @("-TargetRepo",$TargetRepo)
+    if([string]::IsNullOrWhiteSpace($TargetRepo)){
+      $TargetRepo = (Get-Location).Path
+    }
+
+    Invoke-PieScript `
+      -Script "pie_verify_init_v1.ps1" `
+      -Args @(
+        "-TargetRepo",$TargetRepo
+      )
+
     return
   }
 
   "detect" {
-    if([string]::IsNullOrWhiteSpace($TargetRepo)){ $TargetRepo = (Get-Location).Path }
-    Invoke-PieScript -Script "pie_project_detect_v1.ps1" -Args @("-TargetRepo",$TargetRepo)
+    if([string]::IsNullOrWhiteSpace($TargetRepo)){
+      $TargetRepo = (Get-Location).Path
+    }
+
+    Invoke-PieScript `
+      -Script "pie_project_detect_v1.ps1" `
+      -Args @(
+        "-TargetRepo",$TargetRepo
+      )
+
     return
   }
 
   "stress-models" {
-    $A = @("-RepoRoot",$RepoRoot,"-Iterations",([string]$Iterations))
-    if($PullMissing){ $A += "-PullMissing" }
-    Invoke-PieScript -Script "pie_model_matrix_stress_v1.ps1" -Args $A
+    $A = @(
+      "-RepoRoot",$RepoRoot,
+      "-Iterations",([string]$Iterations)
+    )
+
+    if($PullMissing){
+      $A += "-PullMissing"
+    }
+
+    Invoke-PieScript `
+      -Script "pie_model_matrix_stress_v1.ps1" `
+      -Args $A
+
     return
   }
 
   "score" {
-    Invoke-PieScript -Script "pie_benchmark_score_v1.ps1" -Args @("-RepoRoot",$RepoRoot)
+    Invoke-PieScript `
+      -Script "pie_benchmark_score_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot
+      )
+
     return
   }
 
   "show" {
     $A = @("-RepoRoot",$RepoRoot)
-    if(-not [string]::IsNullOrWhiteSpace($Model)){ $A += @("-Model",$Model) }
-    if($LastResults){ $A += "-LastResults" }
-    if($Scorecard){ $A += "-Scorecard" }
-    Invoke-PieScript -Script "pie_show_results_v1.ps1" -Args $A
+
+    if(-not [string]::IsNullOrWhiteSpace($Model)){
+      $A += @("-Model",$Model)
+    }
+
+    if($LastResults){
+      $A += "-LastResults"
+    }
+
+    if($Scorecard){
+      $A += "-Scorecard"
+    }
+
+    Invoke-PieScript `
+      -Script "pie_show_results_v1.ps1" `
+      -Args $A
+
     return
   }
 
   "verify-runtime" {
-    Invoke-PieScript -Script "_RUN_pie_runtime_green_v1.ps1" -Args @("-RepoRoot",$RepoRoot)
+    Invoke-PieScript `
+      -Script "_RUN_pie_runtime_green_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot
+      )
+
     return
   }
 
-  default { throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command) }
+  default {
+    throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
+  }
 }
