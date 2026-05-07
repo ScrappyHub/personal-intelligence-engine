@@ -15,6 +15,7 @@ param(
   [string]$Project = "",
   [string]$ProjectRepo = "",
   [string]$TargetRepo = "",
+  [string]$Prompt = "",
   [switch]$PullMissing,
   [switch]$LastResults,
   [switch]$Scorecard,
@@ -70,6 +71,8 @@ function Show-Help {
   Write-Host "  chat           Start local chat"
   Write-Host "  doc            Send a document to PIE"
   Write-Host "  image          Send an image path to PIE"
+  Write-Host "  attach         Attach a file/image to a session"
+  Write-Host "  generate-image Generate an image request"
   Write-Host "  memory         Memory commands"
   Write-Host "  save           Save conversation by hash"
   Write-Host "  open           Reopen saved conversation by hash"
@@ -203,6 +206,41 @@ switch($Command.ToLowerInvariant()){
     return
   }
 
+
+  "attach" {
+
+    if([string]::IsNullOrWhiteSpace($Path)){
+      throw "PIE_ATTACH_PATH_REQUIRED"
+    }
+
+    Invoke-PieScript `
+      -Script "pie_attach_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Path",$Path
+      )
+
+    return
+  }
+
+  "generate-image" {
+
+    if([string]::IsNullOrWhiteSpace($Prompt)){
+      throw "PIE_IMAGE_PROMPT_REQUIRED"
+    }
+
+    Invoke-PieScript `
+      -Script "pie_generate_image_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Prompt",$Prompt,
+        "-Backend",$Backend
+      )
+
+    return
+  }
   "memory" {
 
     switch($Subcommand.ToLowerInvariant()){
@@ -434,4 +472,5 @@ switch($Command.ToLowerInvariant()){
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
 
