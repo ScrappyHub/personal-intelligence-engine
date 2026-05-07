@@ -16,6 +16,8 @@ param(
   [string]$ProjectRepo = "",
   [string]$TargetRepo = "",
   [switch]$PullMissing,
+  [switch]$LastResults,
+  [switch]$Scorecard,
   [int]$Iterations = 2
 )
 
@@ -76,6 +78,7 @@ function Show-Help {
   Write-Host "  detect         Detect repo/project stack"
   Write-Host "  stress-models  Stress test local models"
   Write-Host "  score          Score latest benchmark run"
+  Write-Host "  show           Show latest benchmark/model results"
   Write-Host ""
 
   Write-Host "Examples:"
@@ -262,7 +265,34 @@ switch($Command.ToLowerInvariant()){
         return
       }
 
-      default {
+    
+  "show" {
+
+    $A = @(
+      "-RepoRoot",$RepoRoot
+    )
+
+    if(-not [string]::IsNullOrWhiteSpace($Model)){
+      $A += @(
+        "-Model",$Model
+      )
+    }
+
+    if($LastResults){
+      $A += "-LastResults"
+    }
+
+    if($Scorecard){
+      $A += "-Scorecard"
+    }
+
+    Invoke-PieScript `
+      -Script "pie_show_results_v1.ps1" `
+      -Args $A
+
+    return
+  }
+  default {
         throw ("PIE_MEMORY_UNKNOWN_COMMAND: " + $Subcommand)
       }
     }
@@ -373,7 +403,35 @@ switch($Command.ToLowerInvariant()){
     return
   }
 
+
+  "show" {
+
+    $A = @(
+      "-RepoRoot",$RepoRoot
+    )
+
+    if(-not [string]::IsNullOrWhiteSpace($Model)){
+      $A += @(
+        "-Model",$Model
+      )
+    }
+
+    if($LastResults){
+      $A += "-LastResults"
+    }
+
+    if($Scorecard){
+      $A += "-Scorecard"
+    }
+
+    Invoke-PieScript `
+      -Script "pie_show_results_v1.ps1" `
+      -Args $A
+
+    return
+  }
   default {
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
