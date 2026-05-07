@@ -72,6 +72,7 @@ function Show-Help {
   Write-Host "  ask            Ask PIE once using session memory/attachments"
   Write-Host "  doc            Send a document to PIE"
   Write-Host "  image          Send an image path to PIE"
+  Write-Host "  vision         Inspect latest attached image with a vision model"
   Write-Host "  attach         Attach a file/image to a session"
   Write-Host "  generate-image Generate an image request"
   Write-Host "  memory         Memory commands"
@@ -206,6 +207,23 @@ switch($Command.ToLowerInvariant()){
     return
   }
 
+
+  "vision" {
+    if([string]::IsNullOrWhiteSpace($Prompt)){
+      $Prompt = "Describe the attached image clearly and concisely."
+    }
+
+    Invoke-PieScript `
+      -Script "pie_vision_ollama_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Model",$Model,
+        "-Prompt",$Prompt
+      )
+
+    return
+  }
   "image" {
 
     if([string]::IsNullOrWhiteSpace($Path)){
@@ -493,6 +511,7 @@ switch($Command.ToLowerInvariant()){
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
 
 
 
