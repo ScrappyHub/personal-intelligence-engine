@@ -1,0 +1,31 @@
+﻿{
+  "schema": "pie.policy.rules.v1",
+  "default_decision": "ALLOW",
+  "rules": [
+    {
+      "event": "memory_accept",
+      "decision": "ASK_CONFIRMATION",
+      "reason_code": "MEMORY_POLICY_ASK"
+    },
+    {
+      "event": "cloud_connector_access",
+      "decision": "ASK_CONFIRMATION",
+      "reason_code": "CONNECTOR_EXTERNAL_ACCESS_REQUIRES_CONFIRMATION"
+    },
+    {
+      "event": "dangerous_command",
+      "decision": "DENY",
+      "reason_code": "DANGEROUS_COMMAND_BLOCKED"
+    },
+    {
+      "event": "project_context_mismatch",
+      "decision": "ASK_CONFIRMATION",
+      "reason_code": "PROJECT_CONTEXT_MISMATCH"
+    },
+    {
+      "event": "external_sync",
+      "decision": "ASK_CONFIRMATION",
+      "reason_code": "EXTERNAL_SYNC_REQUIRES_CONFIRMATION"
+    }
+  ]
+}

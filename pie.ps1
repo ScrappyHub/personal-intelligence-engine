@@ -69,6 +69,7 @@ function Show-Help {
   Write-Host "  vision-correct  Record user correction for latest attached image"
   Write-Host "  generate-image  Generate an image request"
   Write-Host "  memory          Memory commands"
+  Write-Host "  policy          Evaluate local PIE policy decision"
   Write-Host "  save            Save conversation by hash"
   Write-Host "  open            Reopen saved conversation by hash"
   Write-Host "  init            Initialize PIE in a repo"
@@ -98,20 +99,14 @@ function Show-MemoryHelp {
 
 switch($Command.ToLowerInvariant()){
 
-  "help" {
-    Show-Help
-    return
-  }
+  "help" { Show-Help; return }
 
   "setup" {
     Invoke-PieScript -Script "pie_setup_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-Profile",$Profile)
     return
   }
 
-  "models" {
-    & ollama list
-    return
-  }
+  "models" { & ollama list; return }
 
   "pull" {
     if([string]::IsNullOrWhiteSpace($Model)){ throw "PIE_CLI_MODEL_REQUIRED" }
@@ -127,13 +122,8 @@ switch($Command.ToLowerInvariant()){
 
   "ask" {
     if([string]::IsNullOrWhiteSpace($Text)){
-      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){
-        $Text = $Subcommand
-      } else {
-        throw "PIE_ASK_TEXT_REQUIRED"
-      }
+      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){ $Text = $Subcommand } else { throw "PIE_ASK_TEXT_REQUIRED" }
     }
-
     Invoke-PieScript -Script "pie_ask_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Message",$Text)
     return
   }
@@ -159,23 +149,15 @@ switch($Command.ToLowerInvariant()){
   }
 
   "vision" {
-    if([string]::IsNullOrWhiteSpace($Prompt)){
-      $Prompt = "Describe the attached image clearly and concisely."
-    }
-
+    if([string]::IsNullOrWhiteSpace($Prompt)){ $Prompt = "Describe the attached image clearly and concisely." }
     Invoke-PieScript -Script "pie_vision_ollama_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Model",$Model,"-Prompt",$Prompt)
     return
   }
 
   "vision-correct" {
     if([string]::IsNullOrWhiteSpace($Text)){
-      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){
-        $Text = $Subcommand
-      } else {
-        throw "PIE_VISION_CORRECTION_TEXT_REQUIRED"
-      }
+      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){ $Text = $Subcommand } else { throw "PIE_VISION_CORRECTION_TEXT_REQUIRED" }
     }
-
     Invoke-PieScript -Script "pie_vision_correct_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Text",$Text)
     return
   }
@@ -188,15 +170,8 @@ switch($Command.ToLowerInvariant()){
 
   "memory" {
     switch($Subcommand.ToLowerInvariant()){
-      "" {
-        Show-MemoryHelp
-        return
-      }
-
-      "help" {
-        Show-MemoryHelp
-        return
-      }
+      "" { Show-MemoryHelp; return }
+      "help" { Show-MemoryHelp; return }
 
       "policy" {
         if([string]::IsNullOrWhiteSpace($Mode)){
@@ -209,25 +184,26 @@ switch($Command.ToLowerInvariant()){
 
       "accept" {
         if([string]::IsNullOrWhiteSpace($Text)){ throw "PIE_MEMORY_TEXT_REQUIRED" }
-
         $A = @("-RepoRoot",$RepoRoot,"-Text",$Text,"-Lane",$Lane)
-
-        if(-not [string]::IsNullOrWhiteSpace($Project)){
-          $A += @("-Project",$Project)
-        }
-
-        if(-not [string]::IsNullOrWhiteSpace($ProjectRepo)){
-          $A += @("-ProjectRepo",$ProjectRepo)
-        }
-
+        if(-not [string]::IsNullOrWhiteSpace($Project)){ $A += @("-Project",$Project) }
+        if(-not [string]::IsNullOrWhiteSpace($ProjectRepo)){ $A += @("-ProjectRepo",$ProjectRepo) }
         Invoke-PieScript -Script "pie_memory_accept_v1.ps1" -Args $A
         return
       }
 
-      default {
-        throw ("PIE_MEMORY_UNKNOWN_COMMAND: " + $Subcommand)
-      }
+      default { throw ("PIE_MEMORY_UNKNOWN_COMMAND: " + $Subcommand) }
     }
+  }
+
+  "policy" {
+    if([string]::IsNullOrWhiteSpace($Mode)){ throw "PIE_POLICY_EVENT_REQUIRED_USE_MODE" }
+
+    if([string]::IsNullOrWhiteSpace($Text)){
+      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){ $Text = $Subcommand }
+    }
+
+    Invoke-PieScript -Script "pie_policy_decide_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-Event",$Mode,"-Project",$Project,"-Text",$Text)
+    return
   }
 
   "save" {
@@ -273,14 +249,9 @@ switch($Command.ToLowerInvariant()){
 
   "show" {
     $A = @("-RepoRoot",$RepoRoot)
-
-    if(-not [string]::IsNullOrWhiteSpace($Model)){
-      $A += @("-Model",$Model)
-    }
-
+    if(-not [string]::IsNullOrWhiteSpace($Model)){ $A += @("-Model",$Model) }
     if($LastResults){ $A += "-LastResults" }
     if($Scorecard){ $A += "-Scorecard" }
-
     Invoke-PieScript -Script "pie_show_results_v1.ps1" -Args $A
     return
   }
@@ -290,7 +261,5 @@ switch($Command.ToLowerInvariant()){
     return
   }
 
-  default {
-    throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
-  }
+  default { throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command) }
 }

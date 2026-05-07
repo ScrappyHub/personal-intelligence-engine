@@ -1,0 +1,18 @@
+﻿{
+  "schema": "pie.policy.decision.v1",
+  "decisions": [
+    "ALLOW",
+    "DENY",
+    "WARN",
+    "ASK_CONFIRMATION"
+  ],
+  "required_fields": [
+    "schema",
+    "source",
+    "event",
+    "decision",
+    "reason_code",
+    "created_utc"
+  ],
+  "description": "Local PIE policy decision contract. Covenant Gate can later become the policy authority behind this same contract."
+}
