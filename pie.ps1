@@ -73,6 +73,7 @@ function Show-Help {
   Write-Host "  doc            Send a document to PIE"
   Write-Host "  image          Send an image path to PIE"
   Write-Host "  vision         Inspect latest attached image with a vision model"
+  Write-Host "  vision-correct Record user correction for latest attached image"
   Write-Host "  attach         Attach a file/image to a session"
   Write-Host "  generate-image Generate an image request"
   Write-Host "  memory         Memory commands"
@@ -208,6 +209,26 @@ switch($Command.ToLowerInvariant()){
   }
 
 
+
+  "vision-correct" {
+    if([string]::IsNullOrWhiteSpace($Text)){
+      if(-not [string]::IsNullOrWhiteSpace($Subcommand)){
+        $Text = $Subcommand
+      } else {
+        throw "PIE_VISION_CORRECTION_TEXT_REQUIRED"
+      }
+    }
+
+    Invoke-PieScript `
+      -Script "pie_vision_correct_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-Text",$Text
+      )
+
+    return
+  }
   "vision" {
     if([string]::IsNullOrWhiteSpace($Prompt)){
       $Prompt = "Describe the attached image clearly and concisely."
@@ -511,6 +532,7 @@ switch($Command.ToLowerInvariant()){
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
 
 
 
