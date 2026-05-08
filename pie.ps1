@@ -17,6 +17,7 @@ param(
   [string]$TargetRepo = "",
   [string]$Prompt = "",
   [string]$Goal = "",
+  [string]$Language = "",
   [switch]$NewSettings,
   [switch]$PullMissing,
   [switch]$LastResults,
@@ -91,6 +92,8 @@ function Show-Help {
   Write-Host "  generate-image  Generate an image request"
   Write-Host "  memory          Memory commands"
   Write-Host "  policy          Evaluate local PIE policy decision"
+  Write-Host "  integrate       Integrate PIE with a target repo"
+  Write-Host "  scan-last       Show latest repo scan artifact"
   Write-Host "  save            Save conversation by hash"
   Write-Host "  open            Reopen saved conversation by hash"
   Write-Host "  init            Initialize PIE in a repo"
@@ -104,7 +107,7 @@ function Show-Help {
   Write-Host "Examples:"
   Write-Host "  pie chat"
   Write-Host "  pie chat -NewSettings"
-  Write-Host "  pie chat -SessionId my_chat -Goal `"Patch and test the memory resolver.`""
+  Write-Host "  pie integrate -TargetRepo C:\dev\nfl -Project nfl -Language `"PowerShell 5.1`""
   Write-Host "  pie ask -SessionId my_chat -Text `"What is my current chat goal?`""
   Write-Host ""
 }
@@ -161,7 +164,6 @@ switch($Command.ToLowerInvariant()){
   }
 
   "chat" {
-
     $A = @(
       "-RepoRoot",$RepoRoot,
       "-SessionId",$SessionId,
@@ -394,6 +396,63 @@ switch($Command.ToLowerInvariant()){
     return
   }
 
+  "integrate" {
+    if([string]::IsNullOrWhiteSpace($TargetRepo)){
+      throw "PIE_INTEGRATE_TARGET_REPO_REQUIRED"
+    }
+
+    Invoke-PieScript `
+      -Script "pie_repo_integrate_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-TargetRepo",$TargetRepo,
+        "-Project",$Project,
+        "-Language",$Language,
+        "-Intent",$Profile
+      )
+
+    return
+  }
+
+  "scan-last" {
+    if([string]::IsNullOrWhiteSpace($TargetRepo)){
+      throw "PIE_SCAN_LAST_TARGET_REPO_REQUIRED"
+    }
+
+    $TargetRepo = (Resolve-Path -LiteralPath $TargetRepo).Path
+    $ArtifactRoot = Join-Path $TargetRepo ".pie\scan\artifacts"
+
+    if(-not (Test-Path -LiteralPath $ArtifactRoot -PathType Container)){
+      throw "PIE_SCAN_ARTIFACTS_MISSING"
+    }
+
+    $Latest = Get-ChildItem -LiteralPath $ArtifactRoot -Directory |
+      Sort-Object Name -Descending |
+      Select-Object -First 1
+
+    if($null -eq $Latest){
+      throw "PIE_SCAN_LAST_NOT_FOUND"
+    }
+
+    $Desc = Join-Path $Latest.FullName "ai_repo_description.md"
+    $Diff = Join-Path $Latest.FullName "diff.txt"
+
+    Write-Host ("PIE_SCAN_LAST: " + $Latest.FullName) -ForegroundColor Green
+
+    if(Test-Path -LiteralPath $Desc -PathType Leaf){
+      Write-Host ""
+      Write-Host "AI DESCRIPTION" -ForegroundColor Cyan
+      Get-Content -LiteralPath $Desc -Raw
+    }
+
+    if(Test-Path -LiteralPath $Diff -PathType Leaf){
+      Write-Host ""
+      Write-Host "DIFF" -ForegroundColor Cyan
+      Get-Content -LiteralPath $Diff -Raw
+    }
+
+    return
+  }
   "save" {
     Invoke-PieScript `
       -Script "pie_conversation_save_v1.ps1" `
@@ -513,6 +572,23 @@ switch($Command.ToLowerInvariant()){
 
     return
   }
+
+"scan" {
+  if([string]::IsNullOrWhiteSpace($TargetRepo)){
+    throw "PIE_SCAN_TARGET_REPO_REQUIRED"
+  }
+
+  Invoke-PieScript `
+    -Script "pie_repo_scan_v1.ps1" `
+    -Args @(
+      "-RepoRoot",$RepoRoot,
+      "-TargetRepo",$TargetRepo,
+      "-Project",$Project,
+      "-Model",$Model
+    )
+
+  return
+}
 
   "verify-runtime" {
     Invoke-PieScript `
