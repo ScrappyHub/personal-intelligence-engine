@@ -247,3 +247,4 @@ Write-Utf8NoBomLf `
 Write-Host ("PIE_REPO_INTEGRATE_OK: " + $PieRoot) -ForegroundColor Green
 Write-Host ("suggested_language: " + $SuggestedLanguage)
 Write-Host ("repo_profile: " + (Join-Path $ScanRoot "repo_profile.txt"))
+
