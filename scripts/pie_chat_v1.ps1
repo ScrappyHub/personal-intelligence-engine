@@ -14,38 +14,57 @@ $RunRoot = Join-Path $RepoRoot ("runs\" + $SessionId)
 $Enc = New-Object System.Text.UTF8Encoding($false)
 
 function Write-Utf8NoBomLf {
-  param([string]$Path,[string]$Text)
+  param(
+    [Parameter(Mandatory=$true)][string]$Path,
+    [Parameter(Mandatory=$true)][AllowEmptyString()][string]$Text
+  )
 
   $Dir = Split-Path -Parent $Path
+
   if(-not (Test-Path -LiteralPath $Dir -PathType Container)){
     New-Item -ItemType Directory -Force -Path $Dir | Out-Null
   }
 
   $Clean = $Text.Replace("`r`n","`n").Replace("`r","`n")
-  if(-not $Clean.EndsWith("`n")){ $Clean += "`n" }
+
+  if(-not $Clean.EndsWith("`n")){
+    $Clean += "`n"
+  }
 
   [System.IO.File]::WriteAllText($Path,$Clean,$Enc)
 }
 
+function Read-TextIfExists {
+  param([Parameter(Mandatory=$true)][string]$Path)
+
+  if(Test-Path -LiteralPath $Path -PathType Leaf){
+    return (Get-Content -LiteralPath $Path -Raw).Trim()
+  }
+
+  return ""
+}
+
 function Pick-Menu {
-  param([string]$Title,[string[]]$Options)
+  param(
+    [Parameter(Mandatory=$true)][string]$Title,
+    [Parameter(Mandatory=$true)][string[]]$Options
+  )
 
   Write-Host ""
   Write-Host $Title -ForegroundColor Cyan
 
   for($i=0; $i -lt @($Options).Count; $i++){
-    Write-Host ("  " + ($i+1) + ") " + $Options[$i])
+    Write-Host ("  " + ($i + 1) + ") " + $Options[$i])
   }
 
-  $n = Read-Host "select"
+  $N = Read-Host "select"
+  $Idx = ([int]$N) - 1
 
-  $idx = ([int]$n) - 1
-
-  if($idx -lt 0 -or $idx -ge @($Options).Count){
+  if($Idx -lt 0 -or $Idx -ge @($Options).Count){
     throw ("PIE_CHAT_INVALID_SELECTION: " + $Title)
   }
 
-  return $Options[$idx]
+  return $Options[$Idx]
 }
 
 function Select-Repo {
@@ -86,11 +105,16 @@ function Select-Repo {
   return $Pick
 }
 
-$GoalFile = Join-Path $RunRoot "goal.txt"
-$LanguageFile = Join-Path $RunRoot "language.txt"
-$LanguageVersionFile = Join-Path $RunRoot "language_version.txt"
-$ProjectRepoFile = Join-Path $RunRoot "project_repo.txt"
-$SessionMetaFile = Join-Path $RunRoot "session.json"
+function Refresh-SessionPaths {
+  $script:RunRoot = Join-Path $RepoRoot ("runs\" + $SessionId)
+  $script:GoalFile = Join-Path $RunRoot "goal.txt"
+  $script:LanguageFile = Join-Path $RunRoot "language.txt"
+  $script:LanguageVersionFile = Join-Path $RunRoot "language_version.txt"
+  $script:ProjectRepoFile = Join-Path $RunRoot "project_repo.txt"
+  $script:SessionMetaFile = Join-Path $RunRoot "session.json"
+}
+
+Refresh-SessionPaths
 
 Write-Host "PIE_CHAT_V1_START" -ForegroundColor Cyan
 
@@ -107,12 +131,7 @@ if($NewSettings -or -not (Test-Path -LiteralPath $RunRoot -PathType Container)){
 
     if(-not [string]::IsNullOrWhiteSpace($Existing)){
       $SessionId = $Existing.Trim()
-      $RunRoot = Join-Path $RepoRoot ("runs\" + $SessionId)
-      $GoalFile = Join-Path $RunRoot "goal.txt"
-      $LanguageFile = Join-Path $RunRoot "language.txt"
-      $LanguageVersionFile = Join-Path $RunRoot "language_version.txt"
-      $ProjectRepoFile = Join-Path $RunRoot "project_repo.txt"
-      $SessionMetaFile = Join-Path $RunRoot "session.json"
+      Refresh-SessionPaths
     }
   }
 
@@ -139,6 +158,7 @@ if($NewSettings -or -not (Test-Path -LiteralPath $RunRoot -PathType Container)){
     }
 
     New-Item -ItemType Directory -Force -Path $RunRoot | Out-Null
+
     Write-Utf8NoBomLf -Path $ProjectRepoFile -Text $ProjectRepo
     Write-Utf8NoBomLf -Path $LanguageFile -Text $Language
     Write-Utf8NoBomLf -Path $LanguageVersionFile -Text $LanguageVersion
@@ -160,10 +180,10 @@ if($NewSettings -or -not (Test-Path -LiteralPath $RunRoot -PathType Container)){
 
 New-Item -ItemType Directory -Force -Path $RunRoot | Out-Null
 
-$GoalText = if(Test-Path $GoalFile){ (Get-Content $GoalFile -Raw).Trim() } else { "" }
-$LanguageText = if(Test-Path $LanguageFile){ (Get-Content $LanguageFile -Raw).Trim() } else { "" }
-$LanguageVersion = if(Test-Path $LanguageVersionFile){ (Get-Content $LanguageVersionFile -Raw).Trim() } else { "" }
-$ProjectRepo = if(Test-Path $ProjectRepoFile){ (Get-Content $ProjectRepoFile -Raw).Trim() } else { "" }
+$GoalText = Read-TextIfExists -Path $GoalFile
+$LanguageText = Read-TextIfExists -Path $LanguageFile
+$LanguageVersion = Read-TextIfExists -Path $LanguageVersionFile
+$ProjectRepo = Read-TextIfExists -Path $ProjectRepoFile
 
 $Meta = [ordered]@{
   schema = "pie.chat.session.v1"
@@ -202,13 +222,19 @@ while($true){
 
   $msg = Read-Host "you"
 
-  if($null -eq $msg){ continue }
+  if($null -eq $msg){
+    continue
+  }
 
   $msg = [string]$msg
 
-  if([string]::IsNullOrWhiteSpace($msg)){ continue }
+  if([string]::IsNullOrWhiteSpace($msg)){
+    continue
+  }
 
-  if($msg -eq "/exit"){ break }
+  if($msg -eq "/exit"){
+    break
+  }
 
   if($msg -eq "/drop"){
     Remove-Item -LiteralPath $RunRoot -Recurse -Force -ErrorAction SilentlyContinue
@@ -217,6 +243,11 @@ while($true){
   }
 
   if($msg -eq "/settings"){
+    $GoalText = Read-TextIfExists -Path $GoalFile
+    $LanguageText = Read-TextIfExists -Path $LanguageFile
+    $LanguageVersion = Read-TextIfExists -Path $LanguageVersionFile
+    $ProjectRepo = Read-TextIfExists -Path $ProjectRepoFile
+
     Write-Host ("goal: " + $GoalText)
     Write-Host ("language: " + $LanguageText + " " + $LanguageVersion)
     Write-Host ("repo: " + $ProjectRepo)
@@ -244,25 +275,33 @@ while($true){
     continue
   }
 
-  $GoalText = if(Test-Path $GoalFile){ (Get-Content $GoalFile -Raw).Trim() } else { "" }
-  $LanguageText = if(Test-Path $LanguageFile){ (Get-Content $LanguageFile -Raw).Trim() } else { "" }
-  $LanguageVersion = if(Test-Path $LanguageVersionFile){ (Get-Content $LanguageVersionFile -Raw).Trim() } else { "" }
-  $ProjectRepo = if(Test-Path $ProjectRepoFile){ (Get-Content $ProjectRepoFile -Raw).Trim() } else { "" }
+  Write-Host "PIE_CHAT_CONTEXT_BUILD_START" -ForegroundColor DarkCyan
 
-  $FullMessage = @"
-CHAT GOAL:
-$GoalText
+  $ContextOut = @(
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+      -File (Join-Path $RepoRoot "scripts\pie_context_build_v1.ps1") `
+      -RepoRoot $RepoRoot `
+      -SessionId $SessionId `
+      -UserMessage $msg
+  ) -join "`n"
 
-CODING LANGUAGE / STACK:
-$LanguageText
-$LanguageVersion
+  if($LASTEXITCODE -ne 0){
+    Write-Host "PIE_CHAT_CONTEXT_BUILD_FAIL" -ForegroundColor Red
+    continue
+  }
 
-PROJECT REPO:
-$ProjectRepo
+  $PromptPath = ""
 
-USER:
-$msg
-"@
+  foreach($Line in @($ContextOut -split "`n")){
+    if($Line -like "PIE_CONTEXT_BUILD_OK:*"){
+      $PromptPath = $Line.Substring("PIE_CONTEXT_BUILD_OK:".Length).Trim()
+    }
+  }
+
+  if([string]::IsNullOrWhiteSpace($PromptPath)){
+    Write-Host "PIE_CHAT_CONTEXT_PROMPT_PATH_MISSING" -ForegroundColor Red
+    continue
+  }
 
   Write-Host "PIE_CHAT_SEND_START" -ForegroundColor DarkCyan
 
@@ -270,7 +309,7 @@ $msg
     -File (Join-Path $RepoRoot "scripts\pie_agent_send_v1.ps1") `
     -RepoRoot $RepoRoot `
     -SessionId $SessionId `
-    -Message $FullMessage
+    -MessagePath $PromptPath
 
   if($LASTEXITCODE -ne 0){
     Write-Host "PIE_CHAT_SEND_FAIL" -ForegroundColor Red
