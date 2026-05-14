@@ -170,6 +170,11 @@ Do not invent repo identity, files, WBS docs, specs, schemas, or commands.
 If repo scan facts say what the repo is, that identity is authoritative.
 If facts are missing, say what is missing.
 When multiple repos are present, keep their facts separated and label which repo each claim comes from.
+IMPORTANT PATH RULE:
+- Copy Windows paths exactly as provided.
+- Never shorten, normalize, infer, or rewrite paths.
+- If the context says C:\dev\nfl, you must write C:\dev\nfl exactly, not C:\dev\fl.
+- If the user enters a shell command inside chat, explain that shell commands must be run in PowerShell, not treated as a normal chat request.
 
 SESSION GOAL:
 $Goal
@@ -201,3 +206,4 @@ Write-Utf8NoBomLf -Path $PacketPath -Text ($Packet | ConvertTo-Json -Depth 12)
 Write-Utf8NoBomLf -Path $PromptPath -Text $Prompt
 
 Write-Host ("PIE_CONTEXT_BUILD_OK: " + $PromptPath) -ForegroundColor Green
+

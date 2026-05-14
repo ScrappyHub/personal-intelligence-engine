@@ -274,6 +274,11 @@ while($true){
     Write-Host ("PIE_CHAT_REPO_SET: " + $ProjectRepo) -ForegroundColor Green
     continue
   }
+  if($msg -match "^(git|powershell|pwsh|node|npm|python|py|ollama|supabase|docker|dotnet)\s+"){
+    Write-Host "PIE_CHAT_COMMAND_DETECTED" -ForegroundColor Yellow
+    Write-Host "Run shell commands in PowerShell, not inside PIE chat. PIE will not execute it as chat text."
+    continue
+  }
 
   Write-Host "PIE_CHAT_CONTEXT_BUILD_START" -ForegroundColor DarkCyan
 
@@ -317,3 +322,4 @@ while($true){
 
   Write-Host ""
 }
+
