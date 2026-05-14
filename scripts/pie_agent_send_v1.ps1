@@ -142,9 +142,17 @@ $Proc = Start-Process `
   -ArgumentList $BackendArgs `
   -NoNewWindow `
   -PassThru `
-  -Wait `
   -RedirectStandardOutput $BackendOut `
   -RedirectStandardError $BackendErr
+
+$TimeoutSeconds = 120
+
+if(-not $Proc.WaitForExit($TimeoutSeconds * 1000)){
+  try { $Proc.Kill() } catch { }
+  throw ("PIE_AGENT_BACKEND_TIMEOUT: stdout=" + $BackendOut + " stderr=" + $BackendErr)
+}
+
+$Proc.Refresh()
 
 $OutTextPre = ""
 

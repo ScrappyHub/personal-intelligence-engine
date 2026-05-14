@@ -414,6 +414,26 @@ switch($Command.ToLowerInvariant()){
     return
   }
 
+  "repo-link" {
+    if([string]::IsNullOrWhiteSpace($SessionId)){
+      throw "PIE_REPO_LINK_SESSION_REQUIRED"
+    }
+
+    if([string]::IsNullOrWhiteSpace($TargetRepo)){
+      throw "PIE_REPO_LINK_TARGET_REPO_REQUIRED"
+    }
+
+    Invoke-PieScript `
+      -Script "pie_repo_link_v1.ps1" `
+      -Args @(
+        "-RepoRoot",$RepoRoot,
+        "-SessionId",$SessionId,
+        "-TargetRepo",$TargetRepo,
+        "-Role",$Role
+      )
+
+    return
+  }
   "scan-last" {
     if([string]::IsNullOrWhiteSpace($TargetRepo)){
       throw "PIE_SCAN_LAST_TARGET_REPO_REQUIRED"
@@ -604,5 +624,9 @@ switch($Command.ToLowerInvariant()){
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
+
+
+
 
 

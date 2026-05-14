@@ -346,7 +346,10 @@ if(Test-Path -LiteralPath (Join-Path $TargetRepo "README.md") -PathType Leaf){
     [void]$DeterministicDescription.Add("This repository identifies itself as Never Forgetting Ledger (NFL), a witness-only hash/integrity ledger.")
   }
   else {
-    [void]$DeterministicDescription.Add("README.md exists. Project identity should be derived from README.md before model guesses.")
+    $ReadmeFirstLines = (($ReadmeText -split "`n") | Select-Object -First 20) -join "`n"
+  [void]$DeterministicDescription.Add("README.md exists. Deterministic README excerpt:")
+  [void]$DeterministicDescription.Add("")
+  [void]$DeterministicDescription.Add($ReadmeFirstLines)
   }
 }
 else {
@@ -427,6 +430,7 @@ if($Preview.Length -gt 4000){ $Preview = $Preview.Substring(0,4000) + "`n`n[prev
 
 Write-Host $Preview
 Write-Host "--------------------------------"
+
 
 
 

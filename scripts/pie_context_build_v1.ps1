@@ -18,16 +18,12 @@ function Write-Utf8NoBomLf {
   )
 
   $Dir = Split-Path -Parent $Path
-
   if(-not (Test-Path -LiteralPath $Dir -PathType Container)){
     New-Item -ItemType Directory -Force -Path $Dir | Out-Null
   }
 
   $Clean = $Text.Replace("`r`n","`n").Replace("`r","`n")
-
-  if(-not $Clean.EndsWith("`n")){
-    $Clean += "`n"
-  }
+  if(-not $Clean.EndsWith("`n")){ $Clean += "`n" }
 
   [System.IO.File]::WriteAllText($Path,$Clean,$Enc)
 }
@@ -55,19 +51,15 @@ function Get-LatestRepoScanText {
     Sort-Object Name -Descending |
     Select-Object -First 1
 
-  if($null -eq $Latest){
-    return ""
-  }
+  if($null -eq $Latest){ return "" }
 
   $Desc = Join-Path $Latest.FullName "ai_repo_description.md"
 
   if(Test-Path -LiteralPath $Desc -PathType Leaf){
     $Text = Get-Content -LiteralPath $Desc -Raw
-
-    if($Text.Length -gt 9000){
-      $Text = $Text.Substring(0,9000) + "`n`n[repo scan truncated]"
+    if($Text.Length -gt 7000){
+      $Text = $Text.Substring(0,7000) + "`n`n[repo scan truncated]"
     }
-
     return $Text.Trim()
   }
 
@@ -87,10 +79,26 @@ function Get-RepoMemoryText {
   return ""
 }
 
+function Get-PolicySummary {
+  param([Parameter(Mandatory=$true)][string]$RepoRoot)
+
+  $RulesPath = Join-Path $RepoRoot "policies\PIE_POLICY_RULES.v1.json"
+
+  if(-not (Test-Path -LiteralPath $RulesPath -PathType Leaf)){
+    return "No PIE policy rules file found."
+  }
+
+  $Raw = Get-Content -LiteralPath $RulesPath -Raw
+  if($Raw.Length -gt 4000){ $Raw = $Raw.Substring(0,4000) + "`n[policy truncated]" }
+
+  return $Raw.Trim()
+}
+
 $Goal = Read-TextIfExists -Path (Join-Path $RunRoot "goal.txt")
 $Language = Read-TextIfExists -Path (Join-Path $RunRoot "language.txt")
 $LanguageVersion = Read-TextIfExists -Path (Join-Path $RunRoot "language_version.txt")
 $ProjectRepo = Read-TextIfExists -Path (Join-Path $RunRoot "project_repo.txt")
+$LinksPath = Join-Path $RunRoot "repo_links.ndjson"
 
 $RepoScan = ""
 $RepoMemory = ""
@@ -103,13 +111,39 @@ if(-not [string]::IsNullOrWhiteSpace($ProjectRepo)){
   }
 }
 
+$LinkedRepoText = New-Object System.Collections.Generic.List[string]
+$LinkedRepoCount = 0
+
+if(Test-Path -LiteralPath $LinksPath -PathType Leaf){
+  foreach($Line in @(Get-Content -LiteralPath $LinksPath -ErrorAction SilentlyContinue | Select-Object -Last 10)){
+    if([string]::IsNullOrWhiteSpace($Line)){ continue }
+
+    try {
+      $Obj = $Line | ConvertFrom-Json
+      $LinkedRepo = [string]$Obj.target_repo
+      $Role = [string]$Obj.role
+
+      if(Test-Path -LiteralPath $LinkedRepo -PathType Container){
+        $LinkedRepoCount++
+        [void]$LinkedRepoText.Add("## LINKED REPO role=" + $Role)
+        [void]$LinkedRepoText.Add("repo=" + $LinkedRepo)
+        [void]$LinkedRepoText.Add((Get-LatestRepoScanText -TargetRepo $LinkedRepo))
+        [void]$LinkedRepoText.Add("")
+      }
+    }
+    catch { }
+  }
+}
+
+$PolicySummary = Get-PolicySummary -RepoRoot $RepoRoot
+
 $ContextRoot = Join-Path $RunRoot "context_packets"
 $Stamp = Get-Date -Format "yyyyMMdd_HHmmss_fff"
 $PacketPath = Join-Path $ContextRoot ("context_packet_" + $Stamp + ".json")
 $PromptPath = Join-Path $ContextRoot ("context_prompt_" + $Stamp + ".txt")
 
 $Packet = [ordered]@{
-  schema = "pie.context.packet.v1"
+  schema = "pie.context.packet.v2"
   session_id = $SessionId
   goal = $Goal
   language = $Language
@@ -117,12 +151,16 @@ $Packet = [ordered]@{
   project_repo = $ProjectRepo
   has_repo_scan = -not [string]::IsNullOrWhiteSpace($RepoScan)
   has_repo_memory = -not [string]::IsNullOrWhiteSpace($RepoMemory)
+  linked_repo_count = $LinkedRepoCount
+  has_policy_summary = -not [string]::IsNullOrWhiteSpace($PolicySummary)
   user_message = $UserMessage
   created_utc = [DateTime]::UtcNow.ToString("o")
 }
 
+$LinkedReposJoined = $LinkedRepoText.ToArray() -join "`n"
+
 $Prompt = @"
-PIE GOVERNED CONTEXT PACKET
+PIE GOVERNED CONTEXT PACKET v2
 
 ROLE:
 You are PIE, a local-first governed AI runtime.
@@ -131,6 +169,7 @@ You must use deterministic repo facts before model guesses.
 Do not invent repo identity, files, WBS docs, specs, schemas, or commands.
 If repo scan facts say what the repo is, that identity is authoritative.
 If facts are missing, say what is missing.
+When multiple repos are present, keep their facts separated and label which repo each claim comes from.
 
 SESSION GOAL:
 $Goal
@@ -139,14 +178,20 @@ LANGUAGE / RUNTIME:
 $Language
 $LanguageVersion
 
-PROJECT REPO:
+PRIMARY PROJECT REPO:
 $ProjectRepo
 
-REPO MEMORY:
+PIE POLICY SUMMARY:
+$PolicySummary
+
+PRIMARY REPO MEMORY:
 $RepoMemory
 
-LATEST REPO SCAN ARTIFACT:
+PRIMARY REPO SCAN ARTIFACT:
 $RepoScan
+
+LINKED REPO CONTEXT:
+$LinkedReposJoined
 
 USER MESSAGE:
 $UserMessage
