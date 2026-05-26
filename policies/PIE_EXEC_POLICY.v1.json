@@ -1,0 +1,50 @@
+{
+  "schema": "pie.exec.policy.v2",
+  "default_decision": "ASK_CONFIRMATION",
+  "allow_auto_confirm_for_classes": [
+    "read_only",
+    "diagnostic",
+    "git_status"
+  ],
+  "deny_command_patterns": [
+    "\\brm\\s+-rf\\b",
+    "\\bremove-item\\b.*\\s-recurse\\b.*\\s-force\\b",
+    "\\bformat-volume\\b",
+    "\\bdel\\s+/s\\b",
+    "\\bshutdown\\b",
+    "\\breg\\s+delete\\b"
+  ],
+  "trust_levels": {
+    "read_only": "LOW_RISK",
+    "diagnostic": "LOW_RISK",
+    "git_status": "LOW_RISK",
+    "selftest": "MEDIUM_RISK",
+    "git_add": "MUTATION",
+    "git_commit": "MUTATION",
+    "git_push": "EXTERNAL_SYNC",
+    "file_write": "MUTATION",
+    "script_run": "EXECUTION",
+    "package_install": "SYSTEM_CHANGE",
+    "unknown": "UNKNOWN"
+  },
+  "allow_classes": [
+    "read_only",
+    "diagnostic",
+    "git_status"
+  ],
+  "ask_confirmation_classes": [
+    "selftest",
+    "git_add",
+    "git_commit",
+    "git_push",
+    "file_write",
+    "script_run",
+    "package_install",
+    "unknown"
+  ],
+  "repo_boundary": {
+    "require_working_directory_exists": true,
+    "require_working_directory_under_session_repo": true,
+    "prefer_session_project_repo": true
+  }
+}

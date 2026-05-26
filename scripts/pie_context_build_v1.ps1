@@ -136,6 +136,31 @@ if(Test-Path -LiteralPath $LinksPath -PathType Leaf){
 }
 
 $PolicySummary = Get-PolicySummary -RepoRoot $RepoRoot
+$MemoryResolution = ""
+
+$MemoryResolveScript = Join-Path $RepoRoot "scripts\pie_memory_resolve_v1.ps1"
+if(Test-Path -LiteralPath $MemoryResolveScript -PathType Leaf){
+  try {
+    $ResolveOut = @(
+      & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+        -File $MemoryResolveScript `
+        -RepoRoot $RepoRoot `
+        -SessionId $SessionId `
+        -Query $UserMessage
+    ) -join "`n"
+
+    $MemoryLatest = Join-Path $RunRoot "memory_resolve\latest_memory_resolution.md"
+    if(Test-Path -LiteralPath $MemoryLatest -PathType Leaf){
+      $MemoryResolution = Get-Content -LiteralPath $MemoryLatest -Raw
+      if($MemoryResolution.Length -gt 10000){
+        $MemoryResolution = $MemoryResolution.Substring(0,10000) + "`n`n[memory resolution truncated]"
+      }
+    }
+  }
+  catch {
+    $MemoryResolution = "Memory resolution unavailable: " + $_.Exception.Message
+  }
+}
 
 $ContextRoot = Join-Path $RunRoot "context_packets"
 $Stamp = Get-Date -Format "yyyyMMdd_HHmmss_fff"
@@ -206,4 +231,5 @@ Write-Utf8NoBomLf -Path $PacketPath -Text ($Packet | ConvertTo-Json -Depth 12)
 Write-Utf8NoBomLf -Path $PromptPath -Text $Prompt
 
 Write-Host ("PIE_CONTEXT_BUILD_OK: " + $PromptPath) -ForegroundColor Green
+
 
