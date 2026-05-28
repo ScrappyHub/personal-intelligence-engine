@@ -18,7 +18,10 @@ $SessionProjectRepo = ""
 $Enc = New-Object System.Text.UTF8Encoding($false)
 
 function Write-Utf8NoBomLf {
-  param([string]$Path,[string]$Text)
+  param(
+    [Parameter(Mandatory=$true)][string]$Path,
+    [Parameter(Mandatory=$true)][AllowEmptyString()][string]$Text
+  )
 
   $Dir = Split-Path -Parent $Path
   if(-not (Test-Path -LiteralPath $Dir -PathType Container)){
@@ -29,21 +32,6 @@ function Write-Utf8NoBomLf {
   if(-not $Clean.EndsWith("`n")){ $Clean += "`n" }
 
   [System.IO.File]::WriteAllText($Path,$Clean,$Enc)
-}
-
-function Test-BlockedCommand {
-  param([string]$Command)
-
-  $C = $Command.ToLowerInvariant()
-
-  if($C -match '\brm\s+-rf\b'){ return "BLOCK_RM_RF" }
-  if($C -match '\bremove-item\b' -and $C -match '\s-recurse\b' -and $C -match '\s-force\b'){ return "BLOCK_FORCE_RECURSIVE_DELETE" }
-  if($C -match '\bformat-volume\b'){ return "BLOCK_FORMAT_VOLUME" }
-  if($C -match '\bdel\s+/s\b'){ return "BLOCK_DEL_RECURSIVE" }
-  if($C -match '\bshutdown\b'){ return "BLOCK_SHUTDOWN" }
-  if($C -match '\breg\s+delete\b'){ return "BLOCK_REG_DELETE" }
-
-  return ""
 }
 
 if(-not (Test-Path -LiteralPath $RunRoot -PathType Container)){
@@ -98,11 +86,16 @@ $ProposalPath = Join-Path $ExecRoot ("proposal_" + $Stamp + ".json")
 $StdoutPath = Join-Path $ExecRoot ("stdout_" + $Stamp + ".txt")
 $StderrPath = Join-Path $ExecRoot ("stderr_" + $Stamp + ".txt")
 $ReceiptPath = Join-Path $ExecRoot "execution_receipts.ndjson"
+$ChildScriptPath = Join-Path $ExecRoot ("child_exec_" + $Stamp + ".ps1")
+$CommandPath = Join-Path $ExecRoot ("command_" + $Stamp + ".txt")
+
+Write-Utf8NoBomLf -Path $CommandPath -Text $Command
 
 $Proposal = [ordered]@{
   schema = "pie.execution.proposal.v1"
   session_id = $SessionId
   command = $Command
+  command_path = $CommandPath
   working_directory = $WorkingDirectory
   decision = $Decision
   reason_code = $BlockReason
@@ -113,6 +106,7 @@ $Proposal = [ordered]@{
   policy_decision = $PolicyDecision
   stdout = $StdoutPath
   stderr = $StderrPath
+  child_script = $ChildScriptPath
   created_utc = [DateTime]::UtcNow.ToString("o")
 }
 
@@ -128,15 +122,51 @@ if((-not $Confirm) -and -not ($AutoConfirmAllowed -and [bool]$PolicyDecision.aut
   Write-Host "PIE_EXEC_PROPOSAL_CREATED" -ForegroundColor Yellow
   Write-Host ("proposal: " + $ProposalPath)
   Write-Host "Re-run with -Confirm to execute."
+
   if([bool]$PolicyDecision.auto_confirm_allowed){
     Write-Host "Auto-confirm is allowed for this command class only if -AutoConfirmAllowed is provided."
   }
+
   exit 0
+}
+
+$WdJson = $WorkingDirectory | ConvertTo-Json -Compress
+$CommandPathJson = $CommandPath | ConvertTo-Json -Compress
+
+$ChildScript = @"
+Set-StrictMode -Version Latest
+`$ErrorActionPreference = "Stop"
+
+`$__pie_workdir = $WdJson
+`$__pie_command_path = $CommandPathJson
+
+if(-not (Test-Path -LiteralPath `$__pie_workdir -PathType Container)){
+  throw ("PIE_CHILD_WORKDIR_MISSING: " + `$__pie_workdir)
+}
+
+if(-not (Test-Path -LiteralPath `$__pie_command_path -PathType Leaf)){
+  throw ("PIE_CHILD_COMMAND_PATH_MISSING: " + `$__pie_command_path)
+}
+
+Set-Location -LiteralPath `$__pie_workdir
+
+`$__pie_command = Get-Content -LiteralPath `$__pie_command_path -Raw
+Invoke-Expression `$__pie_command
+"@
+
+Write-Utf8NoBomLf -Path $ChildScriptPath -Text $ChildScript
+
+$tok=$null
+$err=$null
+[void][System.Management.Automation.Language.Parser]::ParseFile($ChildScriptPath,[ref]$tok,[ref]$err)
+
+if(@($err).Count -gt 0){
+  throw ("PIE_EXEC_CHILD_PARSE_FAIL: " + $err[0].ToString())
 }
 
 $Proc = Start-Process `
   -FilePath "powershell.exe" `
-  -ArgumentList @("-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-Command",$Command) `
+  -ArgumentList @("-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-File",$ChildScriptPath) `
   -WorkingDirectory $WorkingDirectory `
   -NoNewWindow `
   -PassThru `
@@ -163,11 +193,13 @@ $Receipt = [ordered]@{
   schema = "pie.execution.receipt.v1"
   session_id = $SessionId
   command = $Command
+  command_path = $CommandPath
   working_directory = $WorkingDirectory
   exit_code = $ExitCode
   stdout = $StdoutPath
   stderr = $StderrPath
   proposal = $ProposalPath
+  child_script = $ChildScriptPath
   created_utc = [DateTime]::UtcNow.ToString("o")
 }
 
@@ -181,5 +213,3 @@ Write-Host "PIE_EXEC_OK" -ForegroundColor Green
 Write-Host ("stdout: " + $StdoutPath)
 Write-Host ("stderr: " + $StderrPath)
 exit 0
-
-
