@@ -111,7 +111,19 @@ $ScriptsToParse = @(
   "scripts\selftest_pie_plan_v1.ps1",
   "scripts\selftest_pie_exec_v1.ps1",
   "scripts\selftest_pie_exec_policy_v1.ps1",
-  "scripts\selftest_pie_exec_policy_boundary_v1.ps1"
+  "scripts\selftest_pie_exec_policy_boundary_v1.ps1",
+  "scripts\pie_state_snapshot_v1.ps1",
+  "scripts\pie_state_diff_v1.ps1",
+  "scripts\pie_exec_with_snapshot_v1.ps1",
+  "scripts\selftest_pie_exec_snapshot_v1.ps1",
+  "scripts\pie_execution_replay_v1.ps1",
+  "scripts\selftest_pie_execution_replay_v1.ps1",
+  "scripts\pie_reason_trace_v1.ps1",
+  "scripts\selftest_pie_reason_trace_v1.ps1",
+  "scripts\pie_state_snapshot_v1.ps1",
+  "scripts\pie_state_diff_v1.ps1",
+  "scripts\pie_exec_with_snapshot_v1.ps1",
+  "scripts\selftest_pie_exec_snapshot_v1.ps1"
 )
 
 $ParseLines = New-Object System.Collections.Generic.List[string]
@@ -134,7 +146,11 @@ $Selftests = @(
   @{ name="plan"; script="scripts\selftest_pie_plan_v1.ps1" },
   @{ name="exec"; script="scripts\selftest_pie_exec_v1.ps1" },
   @{ name="exec_policy"; script="scripts\selftest_pie_exec_policy_v1.ps1" },
-  @{ name="exec_policy_boundary"; script="scripts\selftest_pie_exec_policy_boundary_v1.ps1" }
+  @{ name="exec_policy_boundary"; script="scripts\selftest_pie_exec_policy_boundary_v1.ps1" },
+  @{ name="exec_snapshot"; script="scripts\selftest_pie_exec_snapshot_v1.ps1" },
+  @{ name="execution_replay"; script="scripts\selftest_pie_execution_replay_v1.ps1" },
+  @{ name="reason_trace"; script="scripts\selftest_pie_reason_trace_v1.ps1" },
+  @{ name="exec_snapshot"; script="scripts\selftest_pie_exec_snapshot_v1.ps1" }
 )
 
 foreach($T in $Selftests){
@@ -168,3 +184,7 @@ Write-Utf8NoBomLf -Path (Join-Path $FreezeRoot "sha256sums.txt") -Text ($HashLin
 
 Write-Host "PIE_TIER0_FULL_GREEN_OK" -ForegroundColor Green
 Write-Host ("freeze: " + $FreezeRoot)
+
+
+
+
