@@ -1,0 +1,28 @@
+{
+  "schema": "pie.reason.trace.schema.v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "session_id",
+    "goal",
+    "constraints",
+    "candidate_actions",
+    "selected_action",
+    "rejected_actions",
+    "policy_result",
+    "created_utc"
+  ],
+  "properties": {
+    "schema": { "const": "pie.reason.trace.v1" },
+    "session_id": { "type": "string" },
+    "goal": { "type": "string" },
+    "context_refs": { "type": "array" },
+    "memory_refs": { "type": "array" },
+    "constraints": { "type": "array" },
+    "candidate_actions": { "type": "array" },
+    "selected_action": { "type": "object" },
+    "rejected_actions": { "type": "array" },
+    "policy_result": { "type": "object" },
+    "created_utc": { "type": "string" }
+  }
+}
