@@ -1,0 +1,49 @@
+{
+  "schema": "pie.capability.registry.v1",
+  "capabilities": [
+    {
+      "id": "repo.status",
+      "name": "Git Status",
+      "command_template": "git status",
+      "class": "git_status",
+      "trust_level": "LOW_RISK",
+      "auto_confirm_allowed": true,
+      "requires_confirmation": false,
+      "scope": "session_repo",
+      "evidence": ["stdout", "stderr", "receipt"]
+    },
+    {
+      "id": "repo.diff",
+      "name": "Git Diff",
+      "command_template": "git diff",
+      "class": "git_status",
+      "trust_level": "LOW_RISK",
+      "auto_confirm_allowed": true,
+      "requires_confirmation": false,
+      "scope": "session_repo",
+      "evidence": ["stdout", "stderr", "receipt"]
+    },
+    {
+      "id": "repo.scan",
+      "name": "PIE Repo Scan",
+      "command_template": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts\\pie_repo_scan_v1.ps1 -TargetRepo . -Project local",
+      "class": "script_run",
+      "trust_level": "EXECUTION",
+      "auto_confirm_allowed": false,
+      "requires_confirmation": true,
+      "scope": "session_repo",
+      "evidence": ["scan_artifact", "stdout", "stderr", "receipt"]
+    },
+    {
+      "id": "tier0.full_green",
+      "name": "PIE Tier-0 Full Green Runner",
+      "command_template": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts\\FULL_GREEN_RUNNER_PIE_TIER0_v1.ps1 -RepoRoot .",
+      "class": "script_run",
+      "trust_level": "EXECUTION",
+      "auto_confirm_allowed": false,
+      "requires_confirmation": true,
+      "scope": "pie_repo",
+      "evidence": ["freeze", "stdout", "stderr", "receipt"]
+    }
+  ]
+}
