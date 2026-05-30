@@ -1,0 +1,41 @@
+{
+  "schema": "pie.capability.graph.v1",
+  "nodes": [
+    {
+      "id": "repo.status",
+      "depends_on": [],
+      "produces": ["git_status_stdout", "execution_receipt", "state_diff"],
+      "risk": "LOW_RISK"
+    },
+    {
+      "id": "repo.diff",
+      "depends_on": ["repo.status"],
+      "produces": ["git_diff_stdout", "execution_receipt", "state_diff"],
+      "risk": "LOW_RISK"
+    },
+    {
+      "id": "repo.scan",
+      "depends_on": ["repo.status"],
+      "produces": ["scan_artifact", "execution_receipt", "state_diff"],
+      "risk": "EXECUTION"
+    },
+    {
+      "id": "tier0.full_green",
+      "depends_on": ["repo.status"],
+      "produces": ["freeze_artifact", "child_receipts", "sha256sums"],
+      "risk": "EXECUTION"
+    }
+  ],
+  "chains": [
+    {
+      "id": "repo.health.basic",
+      "description": "Basic repo health chain using status then diff.",
+      "steps": ["repo.status", "repo.diff"]
+    },
+    {
+      "id": "pie.freeze.audit",
+      "description": "PIE freeze audit chain using status then Tier-0 full green runner.",
+      "steps": ["repo.status", "tier0.full_green"]
+    }
+  ]
+}
