@@ -1,0 +1,33 @@
+{
+    "schema":  "pie.cognition.convergence.v1",
+    "source":  "C:\\dev\\pie\\memory\\cognition_graph\\cognition_graph.ndjson",
+    "sequence_count":  1,
+    "promoted_count":  1,
+    "suppressed_count":  0,
+    "rows":  [
+                 {
+                     "sequence_key":  "repo.status -\u003e repo.diff",
+                     "success":  3,
+                     "partial":  0,
+                     "failure":  0,
+                     "total":  3,
+                     "score":  30,
+                     "verdict":  "convergent"
+                 }
+             ],
+    "promoted":  [
+                     {
+                         "sequence_key":  "repo.status -\u003e repo.diff",
+                         "success":  3,
+                         "partial":  0,
+                         "failure":  0,
+                         "total":  3,
+                         "score":  30,
+                         "verdict":  "convergent"
+                     }
+                 ],
+    "suppressed":  [
+
+                   ],
+    "created_utc":  "2026-05-31T17:45:37.1957643Z"
+}
