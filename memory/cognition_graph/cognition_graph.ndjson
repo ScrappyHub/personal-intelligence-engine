@@ -1,0 +1,1 @@
+{"schema":"pie.cognition.graph.entry.v1","goal":"repo health","sequence":["repo.status","repo.diff"],"sequence_key":"repo.status -\u003e repo.diff","outcome":"success","evidence":"selftest seed","created_utc":"2026-05-31T17:01:35.9345732Z"}
