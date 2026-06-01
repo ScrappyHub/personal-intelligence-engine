@@ -126,6 +126,8 @@ $ScriptsToParse = @(
   "scripts\pie_state_diff_v1.ps1",
   "scripts\pie_exec_with_snapshot_v1.ps1",
   "scripts\selftest_pie_exec_snapshot_v1.ps1"
+  "scripts\pie_cognition_convergence_v1.ps1",
+  "scripts\selftest_pie_cognition_convergence_v1.ps1"
 )
 
 $ParseLines = New-Object System.Collections.Generic.List[string]
@@ -154,6 +156,7 @@ $Selftests = @(
   @{ name="reason_trace"; script="scripts\selftest_pie_reason_trace_v1.ps1" },
   @{ name="capability"; script="scripts\selftest_pie_capability_v1.ps1" },
   @{ name="exec_snapshot"; script="scripts\selftest_pie_exec_snapshot_v1.ps1" }
+  @{ name="cognition_convergence"; script="scripts\selftest_pie_cognition_convergence_v1.ps1" }
 )
 
 foreach($T in $Selftests){
@@ -187,6 +190,9 @@ Write-Utf8NoBomLf -Path (Join-Path $FreezeRoot "sha256sums.txt") -Text ($HashLin
 
 Write-Host "PIE_TIER0_FULL_GREEN_OK" -ForegroundColor Green
 Write-Host ("freeze: " + $FreezeRoot)
+
+
+
 
 
 

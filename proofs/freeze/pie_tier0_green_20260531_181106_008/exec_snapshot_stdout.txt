@@ -1,0 +1,6 @@
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_exec_snapshot_selftest\execution\stdout_20260531_181145_620.txt
+stderr: C:\dev\pie\runs\pie_exec_snapshot_selftest\execution\stderr_20260531_181145_620.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_exec_snapshot_selftest\snapshots\snapshot_20260531_181146_966\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_EXEC_SNAPSHOT_SELFTEST_OK

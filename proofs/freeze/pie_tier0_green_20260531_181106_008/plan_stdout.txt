@@ -1,0 +1,3 @@
+PIE_PLAN_OK: C:\dev\pie\runs\pie_plan_selftest\plans\plan_20260531_181110_785.json
+queue: C:\dev\pie\runs\pie_plan_selftest\execution_queue.ndjson
+PIE_PLAN_SELFTEST_OK
