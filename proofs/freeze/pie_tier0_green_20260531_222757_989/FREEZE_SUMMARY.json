@@ -1,0 +1,11 @@
+{
+    "schema":  "pie.tier0.full_green.summary.v1",
+    "status":  "PIE_TIER0_FULL_GREEN_OK",
+    "repo_root":  "C:\\dev\\pie",
+    "freeze_root":  "C:\\dev\\pie\\proofs\\freeze\\pie_tier0_green_20260531_222757_989",
+    "parse_gate_count":  36,
+    "selftest_count":  14,
+    "child_receipts":  "C:\\dev\\pie\\proofs\\freeze\\pie_tier0_green_20260531_222757_989\\child_receipts.ndjson",
+    "parse_gate_sha256s":  "C:\\dev\\pie\\proofs\\freeze\\pie_tier0_green_20260531_222757_989\\parse_gate_sha256s.txt",
+    "created_utc":  "2026-06-01T02:28:35.5042897Z"
+}
