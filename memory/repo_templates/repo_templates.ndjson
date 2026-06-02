@@ -1,0 +1,1 @@
+{"schema":"pie.repo.template.entry.v1","template_id":"pie.repo.health.v1","repo":"C:\\dev\\pie","repo_name":"pie","purpose":"repo health for PIE itself","sequence":["repo.status","repo.diff"],"sequence_key":"repo.status -\u003e repo.diff","evidence":"repo template selftest seed","created_utc":"2026-06-02T01:46:49.7141011Z"}
