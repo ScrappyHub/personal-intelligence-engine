@@ -141,6 +141,10 @@ $ScriptsToParse = @(
   "scripts\selftest_pie_repo_template_v1.ps1"
   "scripts\pie_multi_repo_route_v1.ps1",
   "scripts\selftest_pie_multi_repo_route_v1.ps1"
+  "scripts\pie_cross_repo_graph_record_v1.ps1",
+  "scripts\pie_cross_repo_graph_query_v1.ps1",
+  "scripts\pie_cross_repo_route_v1.ps1",
+  "scripts\selftest_pie_cross_repo_graph_v1.ps1"
 )
 
 $ParseLines = New-Object System.Collections.Generic.List[string]
@@ -175,6 +179,7 @@ $Selftests = @(
   @{ name="goal_lineage"; script="scripts\selftest_pie_goal_lineage_v1.ps1" }
   @{ name="repo_template"; script="scripts\selftest_pie_repo_template_v1.ps1" }
   @{ name="multi_repo_route"; script="scripts\selftest_pie_multi_repo_route_v1.ps1" }
+  @{ name="cross_repo_graph"; script="scripts\selftest_pie_cross_repo_graph_v1.ps1" }
 )
 
 foreach($T in $Selftests){
@@ -208,6 +213,7 @@ Write-Utf8NoBomLf -Path (Join-Path $FreezeRoot "sha256sums.txt") -Text ($HashLin
 
 Write-Host "PIE_TIER0_FULL_GREEN_OK" -ForegroundColor Green
 Write-Host ("freeze: " + $FreezeRoot)
+
 
 
 
