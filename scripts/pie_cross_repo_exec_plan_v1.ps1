@@ -67,6 +67,7 @@ if(-not (Test-Path -LiteralPath $RoutePath -PathType Leaf)){
 $Route = Get-Content -LiteralPath $RoutePath -Raw | ConvertFrom-Json
 
 $RepoPlans = New-Object System.Collections.Generic.List[object]
+$SeenRepoKeys = @{}
 
 foreach($RepoItem in @($Route.repos)){
   $TargetRepo = [string]$RepoItem.repo
@@ -78,6 +79,14 @@ foreach($RepoItem in @($Route.repos)){
   if(-not (Test-Path -LiteralPath $TargetRepo -PathType Container)){
     continue
   }
+
+  $RepoKey = ((Resolve-Path -LiteralPath $TargetRepo).Path.ToLowerInvariant()) + "|" + ([string]$RepoItem.relation).ToLowerInvariant()
+
+  if($SeenRepoKeys.ContainsKey($RepoKey)){
+    continue
+  }
+
+  $SeenRepoKeys[$RepoKey] = $true
 
   $TemplateJson = @(
     & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
@@ -149,3 +158,4 @@ Write-Utf8NoBomLf -Path $LatestPath -Text $Json
 Write-Host ("PIE_CROSS_REPO_EXEC_PLAN_OK: " + $OutPath) -ForegroundColor Green
 Write-Host ("repo_plan_count: " + [string]@($RepoPlans.ToArray()).Count)
 Write-Host "NO_EXECUTION_PERFORMED"
+
