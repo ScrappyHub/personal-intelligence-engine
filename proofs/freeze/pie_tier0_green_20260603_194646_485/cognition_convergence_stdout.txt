@@ -1,0 +1,2 @@
+PIE_COGNITION_CONVERGENCE_OK: C:\dev\pie\memory\cognition_convergence\cognition_convergence.latest.json
+PIE_COGNITION_CONVERGENCE_SELFTEST_OK

@@ -1,0 +1,4 @@
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_exec_policy_boundary_selftest\execution\stdout_20260603_194702_927.txt
+stderr: C:\dev\pie\runs\pie_exec_policy_boundary_selftest\execution\stderr_20260603_194702_927.txt
+PIE_EXEC_POLICY_BOUNDARY_SELFTEST_OK
