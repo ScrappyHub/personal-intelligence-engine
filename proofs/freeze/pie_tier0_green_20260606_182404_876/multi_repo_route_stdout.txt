@@ -1,0 +1,7 @@
+PIE_REPO_TEMPLATE_RECORD_OK: pie.multi.repo.route.selftest.v1
+PIE_MULTI_REPO_ROUTE_OK: C:\dev\pie\runs\pie_multi_repo_route_selftest\multi_repo_routes\multi_repo_route_20260606_182503_449.json
+repo: C:\dev\pie
+mode: repo_template
+sequence: repo.status -> repo.diff
+NO_EXECUTION_PERFORMED
+PIE_MULTI_REPO_ROUTE_SELFTEST_OK

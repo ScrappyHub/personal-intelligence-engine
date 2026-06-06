@@ -1,0 +1,2 @@
+PIE_REASON_TRACE_OK: C:\dev\pie\runs\pie_reason_trace_selftest\reason_traces\reason_trace_20260606_182427_096.json
+PIE_REASON_TRACE_SELFTEST_OK
