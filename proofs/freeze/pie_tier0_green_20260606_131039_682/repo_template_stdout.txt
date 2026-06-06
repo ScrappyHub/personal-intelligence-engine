@@ -1,0 +1,4 @@
+PIE_REPO_TEMPLATE_RECORD_OK: pie.repo.health.v1
+PIE_REPO_TEMPLATE_PLAN_OK: C:\dev\pie\runs\pie_repo_template_selftest\repo_template_plans\repo_template_plan_20260606_131144_094.json
+sequence: repo.status -> repo.diff
+PIE_REPO_TEMPLATE_SELFTEST_OK
