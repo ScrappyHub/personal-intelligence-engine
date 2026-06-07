@@ -1,0 +1,44 @@
+PIE_CROSS_REPO_GRAPH_RECORD_OK: related_to
+source: C:\dev\pie
+target: C:\dev\pie
+PIE_REPO_TEMPLATE_RECORD_OK: pie.cross.repo.execute.selftest.v1
+PIE_CROSS_REPO_ROUTE_OK: C:\dev\pie\runs\pie_cross_repo_execute_selftest\cross_repo_routes\cross_repo_route_20260607_121424_001.json
+edge_count: 53
+NO_EXECUTION_PERFORMED
+PIE_CROSS_REPO_EXEC_PLAN_OK: C:\dev\pie\runs\pie_cross_repo_execute_selftest\cross_repo_exec_plans\cross_repo_exec_plan_20260607_121425_411.json
+repo_plan_count: 2
+NO_EXECUTION_PERFORMED
+PIE_CROSS_REPO_EXEC_PROPOSAL_OK: C:\dev\pie\runs\pie_cross_repo_execute_selftest\cross_repo_execution\latest_cross_repo_execution_proposal.json
+NO_EXECUTION_PERFORMED
+Re-run with -Confirm to execute.
+PIE_CROSS_REPO_EXEC_PROPOSAL_OK: C:\dev\pie\runs\pie_cross_repo_execute_selftest\cross_repo_execution\latest_cross_repo_execution_proposal.json
+PIE_CROSS_REPO_EXEC_STEP_START: repo.status :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_0\execution\stdout_20260607_121429_948.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_0\execution\stderr_20260607_121429_948.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_0\snapshots\snapshot_20260607_121431_079\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.status
+PIE_CROSS_REPO_EXEC_STEP_START: repo.diff :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_1\execution\stdout_20260607_121436_825.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_1\execution\stderr_20260607_121436_825.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_1\snapshots\snapshot_20260607_121437_947\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.diff
+PIE_CROSS_REPO_EXEC_STEP_START: repo.status :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_2\execution\stdout_20260607_121443_515.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_2\execution\stderr_20260607_121443_515.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_2\snapshots\snapshot_20260607_121444_665\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.status
+PIE_CROSS_REPO_EXEC_STEP_START: repo.diff :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_3\execution\stdout_20260607_121450_183.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_3\execution\stderr_20260607_121450_183.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_execute_selftest_xrepo_3\snapshots\snapshot_20260607_121451_172\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.diff
+PIE_CROSS_REPO_EXECUTE_OK: C:\dev\pie\runs\pie_cross_repo_execute_selftest\cross_repo_execution\latest_cross_repo_execution_summary.json
+PIE_CROSS_REPO_EXECUTE_SELFTEST_OK
