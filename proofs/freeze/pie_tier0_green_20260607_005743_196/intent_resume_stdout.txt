@@ -1,0 +1,6 @@
+PIE_INTENT_RECORD_OK: d7c429754ce449a72743debf
+PIE_INTENT_RESUME_OK: C:\dev\pie\runs\pie_intent_resume_selftest\intent_resume\intent_resume_20260607_005825_336.json
+intent_id: d7c429754ce449a72743debf
+sequence: repo.status -> repo.diff
+NO_EXECUTION_PERFORMED
+PIE_INTENT_RESUME_SELFTEST_OK

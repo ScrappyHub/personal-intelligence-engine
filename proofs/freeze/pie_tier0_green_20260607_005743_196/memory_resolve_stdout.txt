@@ -1,0 +1,2 @@
+PIE_MEMORY_RESOLVE_OK: C:\dev\pie\runs\pie_memory_resolve_selftest\memory_resolve\memory_resolution_20260607_005746_528.md
+PIE_MEMORY_RESOLVE_SELFTEST_OK
