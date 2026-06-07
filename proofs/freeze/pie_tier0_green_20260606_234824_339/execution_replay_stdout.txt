@@ -1,0 +1,5 @@
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_execution_replay_selftest\execution\stdout_20260606_234844_865.txt
+stderr: C:\dev\pie\runs\pie_execution_replay_selftest\execution\stderr_20260606_234844_865.txt
+PIE_EXECUTION_REPLAY_OK: C:\dev\pie\runs\pie_execution_replay_selftest\replay\execution_replay_20260606_234846_273.json
+PIE_EXECUTION_REPLAY_SELFTEST_OK
