@@ -1,0 +1,4 @@
+PIE_REPO_LINK_OK: C:\dev\csl
+role: conformance-layer
+PIE_CONTEXT_SELFTEST_OK
+prompt: C:\dev\pie\runs\pie_context_selftest\context_packets\context_prompt_20260607_130432_288.txt
