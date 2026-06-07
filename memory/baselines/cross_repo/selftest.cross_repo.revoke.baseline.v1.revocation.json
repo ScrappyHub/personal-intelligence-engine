@@ -1,0 +1,13 @@
+{
+    "schema":  "pie.cross.repo.baseline.revocation.v1",
+    "baseline_id":  "selftest.cross_repo.revoke.baseline.v1",
+    "reason_code":  "SELFTEST_REVOKED",
+    "notes":  "selftest revocation",
+    "promotion":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.revoke.baseline.v1.promotion.json",
+    "promotion_sha256":  "e4c8113bfdf31545a83a2e92b26818271059aaa6b08757af7137254c12121b02",
+    "aggregate":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.revoke.baseline.v1.aggregate.json",
+    "aggregate_sha256":  "db052f6b2f153462dfada90bcaafc163e9283ffa7e797c3a4d3defe65f71e62b",
+    "previous_promotion_aggregate_sha256":  "db052f6b2f153462dfada90bcaafc163e9283ffa7e797c3a4d3defe65f71e62b",
+    "revoked":  true,
+    "created_utc":  "2026-06-07T22:40:51.8264216Z"
+}

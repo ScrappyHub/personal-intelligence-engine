@@ -14,6 +14,7 @@ $CandidateAggregate = (Resolve-Path -LiteralPath $CandidateAggregate).Path
 $BaselineRoot = Join-Path $RepoRoot "memory\baselines\cross_repo"
 $BaselineAggregate = Join-Path $BaselineRoot ($BaselineId + ".aggregate.json")
 $PromotionPath = Join-Path $BaselineRoot ($BaselineId + ".promotion.json")
+$RevocationPath = Join-Path $BaselineRoot ($BaselineId + ".revocation.json")
 
 $RunRoot = Join-Path $RepoRoot ("runs\" + $SessionId)
 $OutRoot = Join-Path $RunRoot "cross_repo_baseline_enforcement"
@@ -56,6 +57,49 @@ if(-not (Test-Path -LiteralPath $BaselineAggregate -PathType Leaf)){
 
 if(-not (Test-Path -LiteralPath $PromotionPath -PathType Leaf)){
   throw ("PIE_BASELINE_ENFORCE_PROMOTION_MISSING: " + $PromotionPath)
+}
+
+if(Test-Path -LiteralPath $RevocationPath -PathType Leaf){
+  $Revocation = Get-Content -LiteralPath $RevocationPath -Raw | ConvertFrom-Json
+
+  if($Revocation.schema -ne "pie.cross.repo.baseline.revocation.v1"){
+    throw "PIE_BASELINE_ENFORCE_REVOCATION_SCHEMA_BAD"
+  }
+
+  if([bool]$Revocation.revoked -eq $true){
+    New-Item -ItemType Directory -Force -Path $OutRoot | Out-Null
+
+    $Stamp = Get-Date -Format "yyyyMMdd_HHmmss_fff"
+    $OutPath = Join-Path $OutRoot ("baseline_enforcement_" + $Stamp + ".json")
+    $LatestPath = Join-Path $OutRoot "latest_baseline_enforcement.json"
+
+    $Enforcement = [ordered]@{
+      schema = "pie.cross.repo.baseline.enforcement.v1"
+      session_id = $SessionId
+      baseline_id = $BaselineId
+      baseline_aggregate = $BaselineAggregate
+      baseline_sha256 = ""
+      candidate_aggregate = $CandidateAggregate
+      candidate_sha256 = Sha256File $CandidateAggregate
+      promotion = $PromotionPath
+      revocation = $RevocationPath
+      regression = ""
+      regression_status = ""
+      regression_finding_count = $null
+      decision = "block"
+      reason_code = "BASELINE_REVOKED"
+      created_utc = [DateTime]::UtcNow.ToString("o")
+    }
+
+    $Json = $Enforcement | ConvertTo-Json -Depth 50
+    Write-Utf8NoBomLf -Path $OutPath -Text $Json
+    Write-Utf8NoBomLf -Path $LatestPath -Text $Json
+
+    Write-Host ("PIE_CROSS_REPO_BASELINE_ENFORCE_OK: " + $OutPath) -ForegroundColor Green
+    Write-Host "decision: block"
+    Write-Host "reason_code: BASELINE_REVOKED"
+    exit 0
+  }
 }
 
 $Promotion = Get-Content -LiteralPath $PromotionPath -Raw | ConvertFrom-Json
@@ -138,3 +182,4 @@ Write-Utf8NoBomLf -Path $LatestPath -Text $Json
 Write-Host ("PIE_CROSS_REPO_BASELINE_ENFORCE_OK: " + $OutPath) -ForegroundColor Green
 Write-Host ("decision: " + $Decision)
 Write-Host ("reason_code: " + $Reason)
+
