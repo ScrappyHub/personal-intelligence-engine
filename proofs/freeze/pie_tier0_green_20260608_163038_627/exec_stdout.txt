@@ -1,0 +1,8 @@
+PIE_EXEC_PROPOSAL_CREATED
+proposal: C:\dev\pie\runs\pie_exec_selftest\execution\proposal_20260608_163048_900.json
+Re-run with -Confirm to execute.
+Auto-confirm is allowed for this command class only if -AutoConfirmAllowed is provided.
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_exec_selftest\execution\stdout_20260608_163050_296.txt
+stderr: C:\dev\pie\runs\pie_exec_selftest\execution\stderr_20260608_163050_296.txt
+PIE_EXEC_SELFTEST_OK
