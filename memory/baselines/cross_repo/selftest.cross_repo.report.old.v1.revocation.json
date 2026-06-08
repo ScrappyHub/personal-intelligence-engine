@@ -1,0 +1,13 @@
+{
+    "schema":  "pie.cross.repo.baseline.revocation.v1",
+    "baseline_id":  "selftest.cross_repo.report.old.v1",
+    "reason_code":  "SUPERSEDED_BY_GOVERNANCE_REPORT",
+    "notes":  "governance report selftest revocation",
+    "promotion":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.report.old.v1.promotion.json",
+    "promotion_sha256":  "fafdb6d27a92bc75af372fcbfb9c2c4e49e7599a56a4b20f1f1d5c558a939343",
+    "aggregate":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.report.old.v1.aggregate.json",
+    "aggregate_sha256":  "9c5541f1ae164e921aa65e3e7e884eb54914ff5bc0b14193d895cb442cf922bc",
+    "previous_promotion_aggregate_sha256":  "9c5541f1ae164e921aa65e3e7e884eb54914ff5bc0b14193d895cb442cf922bc",
+    "revoked":  true,
+    "created_utc":  "2026-06-08T21:00:56.6063441Z"
+}

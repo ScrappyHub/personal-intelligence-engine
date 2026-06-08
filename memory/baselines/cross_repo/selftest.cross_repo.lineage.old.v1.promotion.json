@@ -3,11 +3,11 @@
     "baseline_id":  "selftest.cross_repo.lineage.old.v1",
     "aggregate":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.lineage.old.v1.aggregate.json",
     "aggregate_source":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_lineage_audit_selftest\\cross_repo_replay\\latest_cross_repo_replay_aggregate.json",
-    "aggregate_sha256":  "b2298760c23a653d4222cefbca29c3c770e635c6e53276edbc1d786643cd30ba",
+    "aggregate_sha256":  "b5e8ad6f9bb439c006073b1e105542ceb40e94e8e6f97331eef68b868b39f260",
     "child_count":  4,
     "regression":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_lineage_audit_selftest\\cross_repo_regression\\latest_cross_repo_regression_replay.json",
     "regression_status":  "match",
     "regression_finding_count":  0,
     "notes":  "lineage audit old baseline",
-    "created_utc":  "2026-06-08T15:12:12.2909724Z"
+    "created_utc":  "2026-06-08T20:40:28.7502686Z"
 }

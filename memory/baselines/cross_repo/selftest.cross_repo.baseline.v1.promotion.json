@@ -3,11 +3,11 @@
     "baseline_id":  "selftest.cross_repo.baseline.v1",
     "aggregate":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.baseline.v1.aggregate.json",
     "aggregate_source":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest\\cross_repo_replay\\latest_cross_repo_replay_aggregate.json",
-    "aggregate_sha256":  "f851c462299f76f3c16c3c12bcbaac13223836198548dc546777002c7f7202f9",
+    "aggregate_sha256":  "f929309f12da8e1c9c9fffe750f9d73100f78c86f248646a03382c5d2d874fde",
     "child_count":  4,
     "regression":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest\\cross_repo_regression\\latest_cross_repo_regression_replay.json",
     "regression_status":  "match",
     "regression_finding_count":  0,
     "notes":  "selftest verified baseline promotion",
-    "created_utc":  "2026-06-08T00:33:16.8530735Z"
+    "created_utc":  "2026-06-08T20:37:13.7092738Z"
 }
