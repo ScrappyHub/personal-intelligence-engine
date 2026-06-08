@@ -1,0 +1,51 @@
+PIE_CROSS_REPO_GRAPH_RECORD_OK: related_to
+source: C:\dev\pie
+target: C:\dev\pie
+PIE_REPO_TEMPLATE_RECORD_OK: pie.cross.repo.baseline.revoke.selftest.v1
+PIE_CROSS_REPO_ROUTE_OK: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest\cross_repo_routes\cross_repo_route_20260608_132803_137.json
+edge_count: 97
+NO_EXECUTION_PERFORMED
+PIE_CROSS_REPO_EXEC_PLAN_OK: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest\cross_repo_exec_plans\cross_repo_exec_plan_20260608_132805_273.json
+repo_plan_count: 2
+NO_EXECUTION_PERFORMED
+PIE_CROSS_REPO_EXEC_PROPOSAL_OK: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest\cross_repo_execution\latest_cross_repo_execution_proposal.json
+PIE_CROSS_REPO_EXEC_STEP_START: repo.status :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_0\execution\stdout_20260608_132811_737.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_0\execution\stderr_20260608_132811_737.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_0\snapshots\snapshot_20260608_132813_273\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.status
+PIE_CROSS_REPO_EXEC_STEP_START: repo.diff :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_1\execution\stdout_20260608_132823_137.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_1\execution\stderr_20260608_132823_137.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_1\snapshots\snapshot_20260608_132825_095\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.diff
+PIE_CROSS_REPO_EXEC_STEP_START: repo.status :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_2\execution\stdout_20260608_132836_372.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_2\execution\stderr_20260608_132836_372.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_2\snapshots\snapshot_20260608_132837_902\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.status
+PIE_CROSS_REPO_EXEC_STEP_START: repo.diff :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_3\execution\stdout_20260608_132848_197.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_3\execution\stderr_20260608_132848_197.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest_xrepo_3\snapshots\snapshot_20260608_132849_862\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.diff
+PIE_CROSS_REPO_EXECUTE_OK: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest\cross_repo_execution\latest_cross_repo_execution_summary.json
+PIE_CROSS_REPO_REPLAY_AGGREGATE_OK: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest\cross_repo_replay\cross_repo_replay_aggregate_20260608_132855_542.json
+child_count: 4
+PIE_CROSS_REPO_REGRESSION_REPLAY_OK: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest\cross_repo_regression\cross_repo_regression_replay_20260608_132856_454.json
+status: match
+finding_count: 0
+PIE_CROSS_REPO_BASELINE_PROMOTE_OK: C:\dev\pie\memory\baselines\cross_repo\selftest.cross_repo.revoke.baseline.v1.promotion.json
+baseline_id: selftest.cross_repo.revoke.baseline.v1
+aggregate_sha256: c33162b566f1e9e8bea37b5316572bb3fb80edb6da035058a03fde50e61b0340
+PIE_CROSS_REPO_BASELINE_ENFORCE_OK: C:\dev\pie\runs\pie_cross_repo_baseline_revoke_selftest\cross_repo_baseline_enforcement\baseline_enforcement_20260608_132858_704.json
+decision: block
+reason_code: BASELINE_REVOKED
