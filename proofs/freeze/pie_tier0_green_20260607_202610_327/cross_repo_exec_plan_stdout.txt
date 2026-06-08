@@ -1,0 +1,11 @@
+PIE_CROSS_REPO_GRAPH_RECORD_OK: related_to
+source: C:\dev\pie
+target: C:\dev\pie
+PIE_REPO_TEMPLATE_RECORD_OK: pie.cross.repo.exec.plan.selftest.v1
+PIE_CROSS_REPO_ROUTE_OK: C:\dev\pie\runs\pie_cross_repo_exec_plan_selftest\cross_repo_routes\cross_repo_route_20260607_202801_130.json
+edge_count: 79
+NO_EXECUTION_PERFORMED
+PIE_CROSS_REPO_EXEC_PLAN_OK: C:\dev\pie\runs\pie_cross_repo_exec_plan_selftest\cross_repo_exec_plans\cross_repo_exec_plan_20260607_202805_021.json
+repo_plan_count: 2
+NO_EXECUTION_PERFORMED
+PIE_CROSS_REPO_EXEC_PLAN_SELFTEST_OK

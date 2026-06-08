@@ -1,0 +1,8 @@
+PIE_BASELINE_REVOKE_PRE_EXPECT_ALLOW
+At C:\dev\pie\scripts\selftest_pie_cross_repo_baseline_revoke_v1.ps1:115 char:3
++   throw "PIE_BASELINE_REVOKE_PRE_EXPECT_ALLOW"
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (PIE_BASELINE_REVOKE_PRE_EXPECT_AL 
+   LOW:String) [], RuntimeException
+    + FullyQualifiedErrorId : PIE_BASELINE_REVOKE_PRE_EXPECT_ALLOW
+ 
