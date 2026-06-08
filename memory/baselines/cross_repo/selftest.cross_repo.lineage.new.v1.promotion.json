@@ -1,0 +1,17 @@
+{
+    "schema":  "pie.cross.repo.baseline.promotion.v1",
+    "baseline_id":  "selftest.cross_repo.lineage.new.v1",
+    "aggregate":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.lineage.new.v1.aggregate.json",
+    "aggregate_source":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_lineage_audit_selftest\\cross_repo_replay\\latest_cross_repo_replay_aggregate.json",
+    "aggregate_sha256":  "b2298760c23a653d4222cefbca29c3c770e635c6e53276edbc1d786643cd30ba",
+    "child_count":  4,
+    "regression":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_lineage_audit_selftest\\cross_repo_regression\\latest_cross_repo_regression_replay.json",
+    "regression_status":  "match",
+    "regression_finding_count":  0,
+    "notes":  "lineage audit selftest replacement",
+    "supersedes_baseline_id":  "selftest.cross_repo.lineage.old.v1",
+    "supersedes_promotion":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.lineage.old.v1.promotion.json",
+    "supersedes_aggregate_sha256":  "b2298760c23a653d4222cefbca29c3c770e635c6e53276edbc1d786643cd30ba",
+    "supersedes_revocation":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.lineage.old.v1.revocation.json",
+    "created_utc":  "2026-06-08T15:12:13.3626109Z"
+}

@@ -3,15 +3,15 @@
     "baseline_id":  "selftest.cross_repo.replace.new.v1",
     "aggregate":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.replace.new.v1.aggregate.json",
     "aggregate_source":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_replace_selftest\\cross_repo_replay\\latest_cross_repo_replay_aggregate.json",
-    "aggregate_sha256":  "7c78727f70215db1d4248e9a16326d6e3a21cee1e1f18dd4f591f58eb5b97533",
+    "aggregate_sha256":  "656007101d94d620b4d755891af93ce0e26a50b8a80639cb832ed2b946e3fe9d",
     "child_count":  4,
     "regression":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_replace_selftest\\cross_repo_regression\\latest_cross_repo_regression_replay.json",
     "regression_status":  "match",
     "regression_finding_count":  0,
-    "notes":  "selftest baseline replacement",
+    "notes":  "should fail before revoke",
     "supersedes_baseline_id":  "selftest.cross_repo.replace.old.v1",
     "supersedes_promotion":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.replace.old.v1.promotion.json",
-    "supersedes_aggregate_sha256":  "7c78727f70215db1d4248e9a16326d6e3a21cee1e1f18dd4f591f58eb5b97533",
+    "supersedes_aggregate_sha256":  "656007101d94d620b4d755891af93ce0e26a50b8a80639cb832ed2b946e3fe9d",
     "supersedes_revocation":  "C:\\dev\\pie\\memory\\baselines\\cross_repo\\selftest.cross_repo.replace.old.v1.revocation.json",
-    "created_utc":  "2026-06-08T00:03:41.7536903Z"
+    "created_utc":  "2026-06-08T00:35:59.4573926Z"
 }
