@@ -2,7 +2,7 @@
     "schema":  "pie.cross.repo.replay.aggregate.v1",
     "session_id":  "pie_cross_repo_baseline_promote_selftest",
     "receipts":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest\\cross_repo_execution\\cross_repo_execution_receipts.ndjson",
-    "receipt_sha256":  "2f25af64b1dd1433cade1f5fbcc97911f47d5ce197b7301f6098da99479be6c3",
+    "receipt_sha256":  "0c19f788b40d76886a1ad3afd53554ee88a782ec8e0f418091554046bf41726b",
     "child_count":  4,
     "status":  "ok",
     "problems":  [
@@ -15,12 +15,12 @@
                          "capability_id":  "repo.status",
                          "command":  "git status",
                          "status":  "ok",
-                         "stdout":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_0\\execution\\stdout_20260607_130803_663.txt",
-                         "stdout_sha256":  "ccafebf91fed624b3cb3a7052267e59ead09d3b73ed5d733f265d77a9ea99bca",
-                         "stderr":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_0\\execution\\stderr_20260607_130803_663.txt",
+                         "stdout":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_0\\execution\\stdout_20260607_184729_694.txt",
+                         "stdout_sha256":  "3d040fbd346f6127eb85a8322fc81dd9ac0222f78f181ce9c050137a12265560",
+                         "stderr":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_0\\execution\\stderr_20260607_184729_694.txt",
                          "stderr_sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                         "snapshot_diff":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_0\\snapshots\\snapshot_20260607_130804_677\\diff_from_previous.json",
-                         "snapshot_diff_sha256":  "5242567f0734c27f50ccbcb46d783ee7d67ac58cf42a716ec78af5513308a452"
+                         "snapshot_diff":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_0\\snapshots\\snapshot_20260607_184730_704\\diff_from_previous.json",
+                         "snapshot_diff_sha256":  "4d81b9b7ce7562b81956d5eb2e95cb56e4d1307165a0b1166b46fda17eab0c14"
                      },
                      {
                          "child_session_id":  "pie_cross_repo_baseline_promote_selftest_xrepo_1",
@@ -28,12 +28,12 @@
                          "capability_id":  "repo.diff",
                          "command":  "git diff",
                          "status":  "ok",
-                         "stdout":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_1\\execution\\stdout_20260607_130810_459.txt",
-                         "stdout_sha256":  "73e02131563af5a5161e879868c38db02f95054aff17e97ed70521d7683729a8",
-                         "stderr":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_1\\execution\\stderr_20260607_130810_459.txt",
+                         "stdout":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_1\\execution\\stdout_20260607_184736_740.txt",
+                         "stdout_sha256":  "0a91ce222850ac40542d1092b07d65196f988956091caac0c8354b55909c5cb3",
+                         "stderr":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_1\\execution\\stderr_20260607_184736_740.txt",
                          "stderr_sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                         "snapshot_diff":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_1\\snapshots\\snapshot_20260607_130811_535\\diff_from_previous.json",
-                         "snapshot_diff_sha256":  "e53207f750c94724d1d1752d2bf435d558ef6e6310714aa61cb19b4b3ecfb927"
+                         "snapshot_diff":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_1\\snapshots\\snapshot_20260607_184737_803\\diff_from_previous.json",
+                         "snapshot_diff_sha256":  "68b790b7ec0c03a1790d8aaea3d5db053af8ccff753b59b0d50c3251de119619"
                      },
                      {
                          "child_session_id":  "pie_cross_repo_baseline_promote_selftest_xrepo_2",
@@ -41,12 +41,12 @@
                          "capability_id":  "repo.status",
                          "command":  "git status",
                          "status":  "ok",
-                         "stdout":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_2\\execution\\stdout_20260607_130817_677.txt",
-                         "stdout_sha256":  "ccafebf91fed624b3cb3a7052267e59ead09d3b73ed5d733f265d77a9ea99bca",
-                         "stderr":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_2\\execution\\stderr_20260607_130817_677.txt",
+                         "stdout":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_2\\execution\\stdout_20260607_184743_919.txt",
+                         "stdout_sha256":  "3d040fbd346f6127eb85a8322fc81dd9ac0222f78f181ce9c050137a12265560",
+                         "stderr":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_2\\execution\\stderr_20260607_184743_919.txt",
                          "stderr_sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                         "snapshot_diff":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_2\\snapshots\\snapshot_20260607_130818_724\\diff_from_previous.json",
-                         "snapshot_diff_sha256":  "9dae5bf8e1162989dd8c7bbfb3f24adab733f9bea59d251b64d6201cc8fd72e1"
+                         "snapshot_diff":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_2\\snapshots\\snapshot_20260607_184744_949\\diff_from_previous.json",
+                         "snapshot_diff_sha256":  "2d01a17c6d60da023b3f6c1582867c5a4937e2425ab2fd495982af513d45cca7"
                      },
                      {
                          "child_session_id":  "pie_cross_repo_baseline_promote_selftest_xrepo_3",
@@ -54,13 +54,13 @@
                          "capability_id":  "repo.diff",
                          "command":  "git diff",
                          "status":  "ok",
-                         "stdout":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_3\\execution\\stdout_20260607_130824_502.txt",
-                         "stdout_sha256":  "73e02131563af5a5161e879868c38db02f95054aff17e97ed70521d7683729a8",
-                         "stderr":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_3\\execution\\stderr_20260607_130824_502.txt",
+                         "stdout":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_3\\execution\\stdout_20260607_184751_498.txt",
+                         "stdout_sha256":  "0a91ce222850ac40542d1092b07d65196f988956091caac0c8354b55909c5cb3",
+                         "stderr":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_3\\execution\\stderr_20260607_184751_498.txt",
                          "stderr_sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                         "snapshot_diff":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_3\\snapshots\\snapshot_20260607_130825_555\\diff_from_previous.json",
-                         "snapshot_diff_sha256":  "25d1e94f9e8bcdd97ae7ffee6f91fb6fbda084ee8eef00eb4b7d8c82dfe839f3"
+                         "snapshot_diff":  "C:\\dev\\pie\\runs\\pie_cross_repo_baseline_promote_selftest_xrepo_3\\snapshots\\snapshot_20260607_184752_592\\diff_from_previous.json",
+                         "snapshot_diff_sha256":  "8aa474ff43e2ac920041b12dcbab2e24f17b70de6af6e18cdab0eafe89b608e9"
                      }
                  ],
-    "created_utc":  "2026-06-07T17:08:29.0667030Z"
+    "created_utc":  "2026-06-07T22:47:56.1251893Z"
 }
