@@ -58,43 +58,47 @@ function Invoke-StepTimed {
 
   Write-Host ("PIE_GOVERNANCE_GREEN_STEP_START: " + $Name) -ForegroundColor Cyan
 
-  $Args = @(
-    "-NoProfile",
-    "-NonInteractive",
-    "-ExecutionPolicy", "Bypass",
-    "-File", $Script,
-    "-RepoRoot", $RepoRoot
-  )
+  $Job = Start-Job -ScriptBlock {
+    param($ScriptPath,$RepoRootValue,$StdoutPath,$StderrPath)
 
-  $P = Start-Process -FilePath "powershell.exe" `
-    -ArgumentList $Args `
-    -NoNewWindow `
-    -PassThru `
-    -RedirectStandardOutput $Stdout `
-    -RedirectStandardError $Stderr
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+      -File $ScriptPath `
+      -RepoRoot $RepoRootValue `
+      > $StdoutPath 2> $StderrPath
 
-  $Done = $P.WaitForExit($TimeoutSeconds * 1000)
+    return $LASTEXITCODE
+  } -ArgumentList $Script,$RepoRoot,$Stdout,$Stderr
 
-  if(-not $Done){
-    try { Stop-Process -Id $P.Id -Force -ErrorAction SilentlyContinue } catch {}
+  $Done = Wait-Job -Job $Job -Timeout $TimeoutSeconds
+
+  if($null -eq $Done){
+    try { Stop-Job -Job $Job -Force -ErrorAction SilentlyContinue } catch {}
+    try { Remove-Job -Job $Job -Force -ErrorAction SilentlyContinue } catch {}
     Write-Host ("PIE_GOVERNANCE_GREEN_STEP_TIMEOUT: " + $Name) -ForegroundColor Red
     throw ("PIE_GOVERNANCE_GREEN_STEP_TIMEOUT: " + $Name)
   }
 
-  # Required on Windows PowerShell: make sure process metadata is refreshed
-  # after WaitForExit(timeout), otherwise ExitCode can appear blank/null.
-  $P.WaitForExit()
-  $P.Refresh()
-  $ExitCode = $P.ExitCode
+  $Result = @(Receive-Job -Job $Job)
+  $JobState = $Job.State
+  Remove-Job -Job $Job -Force -ErrorAction SilentlyContinue
 
-  if($null -eq $ExitCode){
-    Write-Host ("PIE_GOVERNANCE_GREEN_STEP_EXITCODE_NULL: " + $Name) -ForegroundColor Red
+  if($JobState -ne "Completed"){
+    Write-Host ("PIE_GOVERNANCE_GREEN_STEP_JOB_FAIL: " + $Name + " state=" + $JobState) -ForegroundColor Red
     Write-Host ("stdout: " + $Stdout)
     Write-Host ("stderr: " + $Stderr)
-    throw ("PIE_GOVERNANCE_GREEN_STEP_EXITCODE_NULL: " + $Name)
+    throw ("PIE_GOVERNANCE_GREEN_STEP_JOB_FAIL: " + $Name)
   }
 
-  if([int]$ExitCode -ne 0){
+  if(@($Result).Count -lt 1){
+    Write-Host ("PIE_GOVERNANCE_GREEN_STEP_NO_EXITCODE: " + $Name) -ForegroundColor Red
+    Write-Host ("stdout: " + $Stdout)
+    Write-Host ("stderr: " + $Stderr)
+    throw ("PIE_GOVERNANCE_GREEN_STEP_NO_EXITCODE: " + $Name)
+  }
+
+  $ExitCode = [int]$Result[-1]
+
+  if($ExitCode -ne 0){
     Write-Host ("PIE_GOVERNANCE_GREEN_STEP_FAIL: " + $Name + " exit=" + [string]$ExitCode) -ForegroundColor Red
     Write-Host ("stdout: " + $Stdout)
     Write-Host ("stderr: " + $Stderr)
@@ -250,4 +254,5 @@ Write-Utf8NoBomLf -Path (Join-Path $FreezeRoot "sha256sums.txt") -Text ($SumLine
 Write-Host "PIE_GOVERNANCE_GREEN_OK" -ForegroundColor Green
 Write-Host ("mode: " + $Mode)
 Write-Host ("freeze: " + $FreezeRoot)
+
 
