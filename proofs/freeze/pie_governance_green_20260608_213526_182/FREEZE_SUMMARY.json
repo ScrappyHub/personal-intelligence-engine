@@ -1,0 +1,10 @@
+{
+    "schema":  "pie.governance.green.freeze.summary.v1",
+    "mode":  "latest_governance",
+    "repo_root":  "C:\\dev\\pie",
+    "freeze_root":  "C:\\dev\\pie\\proofs\\freeze\\pie_governance_green_20260608_213526_182",
+    "status":  "ok",
+    "selftest_count":  3,
+    "timeout_seconds":  480,
+    "created_utc":  "2026-06-09T01:38:31.0832601Z"
+}
