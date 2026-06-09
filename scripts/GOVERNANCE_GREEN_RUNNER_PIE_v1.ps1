@@ -81,8 +81,21 @@ function Invoke-StepTimed {
     throw ("PIE_GOVERNANCE_GREEN_STEP_TIMEOUT: " + $Name)
   }
 
-  if($P.ExitCode -ne 0){
-    Write-Host ("PIE_GOVERNANCE_GREEN_STEP_FAIL: " + $Name + " exit=" + [string]$P.ExitCode) -ForegroundColor Red
+  # Required on Windows PowerShell: make sure process metadata is refreshed
+  # after WaitForExit(timeout), otherwise ExitCode can appear blank/null.
+  $P.WaitForExit()
+  $P.Refresh()
+  $ExitCode = $P.ExitCode
+
+  if($null -eq $ExitCode){
+    Write-Host ("PIE_GOVERNANCE_GREEN_STEP_EXITCODE_NULL: " + $Name) -ForegroundColor Red
+    Write-Host ("stdout: " + $Stdout)
+    Write-Host ("stderr: " + $Stderr)
+    throw ("PIE_GOVERNANCE_GREEN_STEP_EXITCODE_NULL: " + $Name)
+  }
+
+  if([int]$ExitCode -ne 0){
+    Write-Host ("PIE_GOVERNANCE_GREEN_STEP_FAIL: " + $Name + " exit=" + [string]$ExitCode) -ForegroundColor Red
     Write-Host ("stdout: " + $Stdout)
     Write-Host ("stderr: " + $Stderr)
     throw ("PIE_GOVERNANCE_GREEN_STEP_FAIL: " + $Name)
@@ -237,3 +250,4 @@ Write-Utf8NoBomLf -Path (Join-Path $FreezeRoot "sha256sums.txt") -Text ($SumLine
 Write-Host "PIE_GOVERNANCE_GREEN_OK" -ForegroundColor Green
 Write-Host ("mode: " + $Mode)
 Write-Host ("freeze: " + $FreezeRoot)
+
