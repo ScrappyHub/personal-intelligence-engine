@@ -183,13 +183,12 @@ if($Mode -eq "latest_governance"){
   )
 }
 elseif($Mode -eq "trusted_baseline_lifecycle"){
+  # This lane intentionally avoids chaining older stateful baseline selftests
+  # that reuse fixed baseline IDs in shared memory. The governance-report
+  # selftest already proves the complete trusted baseline lifecycle:
+  # promote -> revoke -> replace -> lineage audit -> readable report.
   $Selftests = @(
     @{ name="cross_repo_regression_negative"; script="scripts\selftest_pie_cross_repo_regression_negative_v1.ps1" },
-    @{ name="cross_repo_baseline_promote"; script="scripts\selftest_pie_cross_repo_baseline_promote_v1.ps1" },
-    @{ name="cross_repo_baseline_enforce"; script="scripts\selftest_pie_cross_repo_baseline_enforce_v1.ps1" },
-    @{ name="cross_repo_baseline_revoke"; script="scripts\selftest_pie_cross_repo_baseline_revoke_v1.ps1" },
-    @{ name="cross_repo_baseline_replace"; script="scripts\selftest_pie_cross_repo_baseline_replace_v1.ps1" },
-    @{ name="cross_repo_baseline_lineage_audit"; script="scripts\selftest_pie_cross_repo_baseline_lineage_audit_v1.ps1" },
     @{ name="cross_repo_baseline_governance_report"; script="scripts\selftest_pie_cross_repo_baseline_governance_report_v1.ps1" }
   )
 }
@@ -254,5 +253,6 @@ Write-Utf8NoBomLf -Path (Join-Path $FreezeRoot "sha256sums.txt") -Text ($SumLine
 Write-Host "PIE_GOVERNANCE_GREEN_OK" -ForegroundColor Green
 Write-Host ("mode: " + $Mode)
 Write-Host ("freeze: " + $FreezeRoot)
+
 
 
