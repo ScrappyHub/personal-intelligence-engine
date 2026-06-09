@@ -29,6 +29,57 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
+# PIE green command shortcuts.
+# Must run before the legacy command dispatcher/default unknown-command throw.
+if($Command -eq "green"){
+  $ModeArg = ""
+
+  # Depending on how the shell function invokes pie.ps1, $args may still
+  # include the command token itself. Accept both:
+  #   pie green governance        -> $Command=green, $args=green,governance
+  #   .\pie.ps1 green governance  -> $Command=green, $args=governance
+  $RemainingArgs = @($args)
+
+  if($RemainingArgs.Count -ge 1 -and ([string]$RemainingArgs[0]) -eq $Command){
+    if($RemainingArgs.Count -ge 2){
+      $ModeArg = [string]$RemainingArgs[1]
+    }
+  }
+  elseif($RemainingArgs.Count -ge 1){
+    $ModeArg = [string]$RemainingArgs[0]
+  }
+
+  if([string]::IsNullOrWhiteSpace($ModeArg)){
+    throw "PIE_GREEN_USAGE: pie green governance | pie green governance-full | pie green full"
+  }
+
+  if($ModeArg -eq "governance"){
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+      -File (Join-Path $RepoRoot "scripts\GOVERNANCE_GREEN_RUNNER_PIE_v1.ps1") `
+      -RepoRoot $RepoRoot `
+      -Mode "latest_governance"
+    exit $LASTEXITCODE
+  }
+
+  if($ModeArg -eq "governance-full"){
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+      -File (Join-Path $RepoRoot "scripts\GOVERNANCE_GREEN_RUNNER_PIE_v1.ps1") `
+      -RepoRoot $RepoRoot `
+      -Mode "trusted_baseline_lifecycle"
+    exit $LASTEXITCODE
+  }
+
+  if($ModeArg -eq "full"){
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+      -File (Join-Path $RepoRoot "scripts\GOVERNANCE_GREEN_RUNNER_PIE_v1.ps1") `
+      -RepoRoot $RepoRoot `
+      -Mode "full"
+    exit $LASTEXITCODE
+  }
+
+  throw ("PIE_GREEN_UNKNOWN_MODE: " + $ModeArg)
+}
+
 $Scripts = Join-Path $RepoRoot "scripts"
 
 function Invoke-PieScript {
@@ -624,6 +675,9 @@ switch($Command.ToLowerInvariant()){
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
+
+
 
 
 
