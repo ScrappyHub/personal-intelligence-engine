@@ -1,0 +1,92 @@
+{
+    "schema":  "pie.green.commands.manifest.v1",
+    "created_utc":  "2026-06-09T15:15:50.5091962Z",
+    "purpose":  "Machine-readable contract for PIE green command lanes.",
+    "command_root":  "pie green",
+    "commands":  [
+                     {
+                         "command":  "pie green status",
+                         "mode":  "status",
+                         "runs_tests":  false,
+                         "produces_freeze":  false,
+                         "purpose":  "Print current branch, commit, working tree state, latest full green freeze, and latest governance green freeze.",
+                         "evidence":  [
+
+                                      ]
+                     },
+                     {
+                         "command":  "pie green governance",
+                         "mode":  "latest_governance",
+                         "runs_tests":  true,
+                         "produces_freeze":  true,
+                         "freeze_prefix":  "pie_governance_green_",
+                         "purpose":  "Fast changed-lane proof for current trusted-baseline governance work.",
+                         "selftests":  [
+                                           "cross_repo_regression_negative",
+                                           "cross_repo_baseline_enforce",
+                                           "cross_repo_baseline_governance_report"
+                                       ],
+                         "evidence":  [
+                                          "FREEZE_SUMMARY.json",
+                                          "child_receipts.ndjson",
+                                          "parse_gate_sha256s.txt",
+                                          "sha256sums.txt",
+                                          "cross_repo_regression_negative_stdout.txt",
+                                          "cross_repo_regression_negative_stderr.txt",
+                                          "cross_repo_baseline_enforce_stdout.txt",
+                                          "cross_repo_baseline_enforce_stderr.txt",
+                                          "cross_repo_baseline_governance_report_stdout.txt",
+                                          "cross_repo_baseline_governance_report_stderr.txt"
+                                      ]
+                     },
+                     {
+                         "command":  "pie green governance-full",
+                         "mode":  "trusted_baseline_lifecycle",
+                         "runs_tests":  true,
+                         "produces_freeze":  true,
+                         "freeze_prefix":  "pie_governance_green_",
+                         "purpose":  "Fast trusted-baseline lifecycle proof with isolated lifecycle coverage.",
+                         "selftests":  [
+                                           "cross_repo_regression_negative",
+                                           "cross_repo_baseline_governance_report"
+                                       ],
+                         "lifecycle_covered_by_report":  [
+                                                             "promote",
+                                                             "revoke",
+                                                             "replace_supersede",
+                                                             "lineage_audit",
+                                                             "readable_governance_report"
+                                                         ],
+                         "evidence":  [
+                                          "FREEZE_SUMMARY.json",
+                                          "child_receipts.ndjson",
+                                          "parse_gate_sha256s.txt",
+                                          "sha256sums.txt",
+                                          "cross_repo_regression_negative_stdout.txt",
+                                          "cross_repo_regression_negative_stderr.txt",
+                                          "cross_repo_baseline_governance_report_stdout.txt",
+                                          "cross_repo_baseline_governance_report_stderr.txt"
+                                      ]
+                     },
+                     {
+                         "command":  "pie green full",
+                         "mode":  "full",
+                         "runs_tests":  true,
+                         "produces_freeze":  true,
+                         "freeze_prefix":  "pie_tier0_green_",
+                         "purpose":  "Delegate to canonical monolithic full-green runner.",
+                         "delegates_to":  "scripts/FULL_GREEN_RUNNER_PIE_TIER0_v1.ps1",
+                         "evidence":  [
+                                          "FREEZE_SUMMARY.json",
+                                          "child_receipts.ndjson",
+                                          "parse_gate_sha256s.txt",
+                                          "sha256sums.txt"
+                                      ]
+                     }
+                 ],
+    "rules":  {
+                  "use_smallest_green_lane_that_proves_change":  true,
+                  "failed_partial_freezes_must_not_be_committed":  true,
+                  "full_green_required_before_major_release":  true
+              }
+}
