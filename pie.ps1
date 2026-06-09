@@ -53,7 +53,63 @@ if($Command -eq "green"){
     throw "PIE_GREEN_USAGE: pie green governance | pie green governance-full | pie green full"
   }
 
-  if($ModeArg -eq "governance"){
+    if($ModeArg -eq "status"){
+    $Branch = (& git -C $RepoRoot rev-parse --abbrev-ref HEAD 2>$null)
+    $Commit = (& git -C $RepoRoot rev-parse --short HEAD 2>$null)
+    $StatusLines = @(& git -C $RepoRoot status --short)
+
+    $LatestFull = Get-ChildItem (Join-Path $RepoRoot "proofs\freeze") -Directory -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -like "pie_tier0_green_*" } |
+      Sort-Object Name -Descending |
+      Select-Object -First 1
+
+    $LatestGovernance = Get-ChildItem (Join-Path $RepoRoot "proofs\freeze") -Directory -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -like "pie_governance_green_*" } |
+      Sort-Object Name -Descending |
+      Select-Object -First 1
+
+    Write-Host "PIE_GREEN_STATUS" -ForegroundColor Cyan
+    Write-Host ("branch: " + [string]$Branch)
+    Write-Host ("commit: " + [string]$Commit)
+
+    if(@($StatusLines).Count -eq 0){
+      Write-Host "working_tree: clean" -ForegroundColor Green
+    }
+    else {
+      Write-Host "working_tree: dirty" -ForegroundColor Yellow
+      foreach($Line in $StatusLines){
+        Write-Host ("  " + $Line)
+      }
+    }
+
+    if($null -ne $LatestFull){
+      Write-Host ("latest_full_green: " + $LatestFull.FullName)
+      $FullSummary = Join-Path $LatestFull.FullName "FREEZE_SUMMARY.json"
+      if(Test-Path -LiteralPath $FullSummary -PathType Leaf){
+        Write-Host ("latest_full_green_summary: " + $FullSummary)
+      }
+    }
+    else {
+      Write-Host "latest_full_green: none"
+    }
+
+    if($null -ne $LatestGovernance){
+      Write-Host ("latest_governance_green: " + $LatestGovernance.FullName)
+      $GovSummary = Join-Path $LatestGovernance.FullName "FREEZE_SUMMARY.json"
+      if(Test-Path -LiteralPath $GovSummary -PathType Leaf){
+        $S = Get-Content -LiteralPath $GovSummary -Raw | ConvertFrom-Json
+        Write-Host ("latest_governance_mode: " + [string]$S.mode)
+        Write-Host ("latest_governance_status: " + [string]$S.status)
+        Write-Host ("latest_governance_selftest_count: " + [string]$S.selftest_count)
+      }
+    }
+    else {
+      Write-Host "latest_governance_green: none"
+    }
+
+    exit 0
+  }
+if($ModeArg -eq "governance"){
     & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
       -File (Join-Path $RepoRoot "scripts\GOVERNANCE_GREEN_RUNNER_PIE_v1.ps1") `
       -RepoRoot $RepoRoot `
@@ -675,6 +731,7 @@ switch($Command.ToLowerInvariant()){
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
 
 
 
