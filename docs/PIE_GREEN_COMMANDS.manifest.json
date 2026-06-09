@@ -1,6 +1,6 @@
 {
     "schema":  "pie.green.commands.manifest.v1",
-    "created_utc":  "2026-06-09T15:15:50.5091962Z",
+    "created_utc":  "2026-06-09T17:42:25.9739332Z",
     "purpose":  "Machine-readable contract for PIE green command lanes.",
     "command_root":  "pie green",
     "commands":  [
@@ -10,6 +10,22 @@
                          "runs_tests":  false,
                          "produces_freeze":  false,
                          "purpose":  "Print current branch, commit, working tree state, latest full green freeze, and latest governance green freeze.",
+                         "evidence":  [
+
+                                      ]
+                     },
+                     {
+                         "command":  "pie green manifest",
+                         "mode":  "manifest",
+                         "runs_tests":  false,
+                         "produces_freeze":  false,
+                         "purpose":  "Validate the machine-readable green command manifest against CLI routes, runner modes, evidence expectations, and documented lifecycle rules.",
+                         "validates":  [
+                                           "docs/PIE_GREEN_COMMANDS.manifest.json",
+                                           "docs/PIE_GREEN_COMMANDS.md",
+                                           "pie.ps1",
+                                           "scripts/GOVERNANCE_GREEN_RUNNER_PIE_v1.ps1"
+                                       ],
                          "evidence":  [
 
                                       ]

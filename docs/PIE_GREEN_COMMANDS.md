@@ -1,13 +1,14 @@
 # PIE Green Commands
 
-PIE has multiple green lanes. They are intentionally separate so routine govenance work does not require a full monolithic proof run every time.
+PIE has multiple green lanes. They are intentionally separate so routine governance work does not require a full monolithic proof run every time.
 
 ## Command surface
 
 ```powershell
 pie green status
-pie green govenance
-pie green govenance-full
+pie green manifest
+pie green governance
+pie green governance-full
 pie green full
 pie green status
 
@@ -19,12 +20,10 @@ current branch
 current commit
 working tree clean/dirty state
 latest canonical full-green freeze
-latest govenance-green freeze
-govenance freeze mode
-govenance freeze status
-govenance selftest count
-
-Use this before and after work to confirm the repo is clean and to see which evidence pack is currently latest.
+latest governance-green freeze
+governance freeze mode
+governance freeze status
+governance selftest count
 
 Expected shape:
 
@@ -34,25 +33,48 @@ commit: <sha>
 working_tree: clean
 latest_full_green: <path>
 latest_full_green_summary: <path>
-latest_govenance_green: <path>
-latest_govenance_mode: <mode>
-latest_govenance_status: ok
-latest_govenance_selftest_count: <count>
-pie green govenance
+latest_governance_green: <path>
+latest_governance_mode: <mode>
+latest_governance_status: ok
+latest_governance_selftest_count: <count>
+pie green manifest
 
-Fast latest-govenance lane.
+No green lane tests are executed.
 
-This is the normal lane for current trusted-baseline govenance work. It runs the currently relevant govenance checks without rerunning the entire historic full-green stack.
+This command validates the machine-readable green command manifest against the documented and implemented green command surface.
+
+It checks:
+
+manifest schema
+command count
+expected command names
+expected modes
+CLI routes
+runner mode names
+expected evidence filenames
+lifecycle coverage declaration
+green-lane governance rules
+
+Expected shape:
+
+PIE_GREEN_MANIFEST_VALIDATE_OK
+manifest: C:\dev\pie\docs\PIE_GREEN_COMMANDS.manifest.json
+commands: 5
+pie green governance
+
+Fast latest-governance lane.
+
+This is the normal lane for current trusted-baseline governance work. It runs the currently relevant governance checks without rerunning the entire historic full-green stack.
 
 Current scope:
 
 cross-repo negative regression drift vector
 trusted baseline enforcement
-readable baseline govenance report
+readable baseline governance report
 
 Evidence shape:
 
-proofs/freeze/pie_govenance_green_<timestamp>/
+proofs/freeze/pie_governance_green_<timestamp>/
   FREEZE_SUMMARY.json
   child_receipts.ndjson
   parse_gate_sha256s.txt
@@ -61,12 +83,12 @@ proofs/freeze/pie_govenance_green_<timestamp>/
   cross_repo_regression_negative_stderr.txt
   cross_repo_baseline_enforce_stdout.txt
   cross_repo_baseline_enforce_stderr.txt
-  cross_repo_baseline_govenance_report_stdout.txt
-  cross_repo_baseline_govenance_report_stderr.txt
+  cross_repo_baseline_governance_report_stdout.txt
+  cross_repo_baseline_governance_report_stderr.txt
 
-Use this after changing trusted-baseline govenance code, report generation, enforcement logic, or regression drift behavior.
+Use this after changing trusted-baseline governance code, report generation, enforcement logic, or regression drift behavior.
 
-pie green govenance-full
+pie green governance-full
 
 Fast trusted-baseline lifecycle lane.
 
@@ -75,17 +97,17 @@ This lane proves the trusted-baseline lifecycle without chaining older stateful 
 Current scope:
 
 cross-repo negative regression drift vector
-readable baseline govenance report selftest
+readable baseline governance report selftest
 
-The readable report selftest proves the full trusted-baseline lifecycle intenally:
+The readable report selftest proves the full trusted-baseline lifecycle internally:
 
 promote
 → revoke
 → replace / supersede
 → lineage audit
-→ readable govenance report
+→ readable governance report
 
-Use this when the change affects the whole baseline lifecycle contract or when you want stronger evidence than pie green govenance without paying for a full monolithic run.
+Use this when the change affects the whole baseline lifecycle contract or when you want stronger evidence than pie green governance without paying for a full monolithic run.
 
 pie green full
 
@@ -107,8 +129,9 @@ Use the smallest green lane that proves the change:
 
 Change typeRecommended command
 Check evidence state onlypie green status
-Trusted-baseline report/enforcement tweakpie green govenance
-Trusted-baseline lifecycle semanticspie green govenance-full
+Validate green command contractpie green manifest
+Trusted-baseline report/enforcement tweakpie green governance
+Trusted-baseline lifecycle semanticspie green governance-full
 Broad runtime, packet, execution, or release proofpie green full
 Evidence rule
 
@@ -126,8 +149,8 @@ Current green state checkpoint
 At the time this document was added, PIE had:
 
 canonical full green = sealed
-readable baseline govenance = sealed
-fast govenance green = sealed
-govenance-full lifecycle = isolated and green
+readable baseline governance = sealed
+fast governance green = sealed
+governance-full lifecycle = isolated and green
 green status = committed and clean
-n
+green manifest = enforceable command contract
