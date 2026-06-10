@@ -152,3 +152,9 @@ If a green command fails:
 3. remove failed partial freeze evidence from git if accidentally staged
 4. rerun the green lane
 5. commit only the green runner/code and the latest successful freeze
+
+## pie green audit
+
+No heavy green lane tests are executed.
+
+Runs the safe green introspection commands silently, captures their stdout and stderr hashes, writes a JSON audit receipt under runs/green_audit, and reports whether the green command contract is clean.

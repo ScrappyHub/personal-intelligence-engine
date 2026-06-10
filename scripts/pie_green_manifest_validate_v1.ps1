@@ -40,7 +40,7 @@ if($Manifest.command_root -ne "pie green"){
 
 $Commands = @($Manifest.commands)
 
-if($Commands.Count -ne 7){
+if($Commands.Count -ne 8){
   Fail "PIE_GREEN_MANIFEST_COMMAND_COUNT_BAD" ([string]$Commands.Count)
 }
 
@@ -49,6 +49,7 @@ $Expected = @(
   @{ command="pie green list"; mode="list"; runs_tests=$false; produces_freeze=$false },
   @{ command="pie green evidence"; mode="evidence"; runs_tests=$false; produces_freeze=$false },
   @{ command="pie green manifest"; mode="manifest"; runs_tests=$false; produces_freeze=$false },
+  @{ command="pie green audit"; mode="audit"; runs_tests=$false; produces_freeze=$false },
   @{ command="pie green governance"; mode="latest_governance"; runs_tests=$true; produces_freeze=$true },
   @{ command="pie green governance-full"; mode="trusted_baseline_lifecycle"; runs_tests=$true; produces_freeze=$true },
   @{ command="pie green full"; mode="full"; runs_tests=$true; produces_freeze=$true }
@@ -80,7 +81,7 @@ foreach($E in $Expected){
   }
 }
 
-foreach($Mode in @("status","list","evidence","manifest","governance","governance-full","full")){
+foreach($Mode in @("status","list","evidence","manifest","audit","governance","governance-full","full")){
   $Needle = 'if($ModeArg -eq "' + $Mode + '")'
   if($Cli -notlike ("*" + $Needle + "*")){
     Fail "PIE_GREEN_CLI_ROUTE_MISSING" $Needle

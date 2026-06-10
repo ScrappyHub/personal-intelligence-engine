@@ -19,19 +19,18 @@ function Fail {
   throw ($Code + ": " + $Detail)
 }
 
+function Quote-Arg {
+  param([Parameter(Mandatory=$true)][string]$Value)
+  return '"' + ($Value.Replace('\','\\').Replace('"','\"')) + '"'
+}
+
 function Invoke-PieGreenSmoke {
   param(
     [Parameter(Mandatory=$true)][string]$Name,
     [Parameter(Mandatory=$true)][string]$Mode
   )
 
-  $OutFile = Join-Path $env:TEMP ("pie_green_audit_" + $Name + "_stdout.txt")
-  $ErrFile = Join-Path $env:TEMP ("pie_green_audit_" + $Name + "_stderr.txt")
-
-  Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue
-  Remove-Item -LiteralPath $ErrFile -Force -ErrorAction SilentlyContinue
-
-  $ArgList = @(
+  $Args = @(
     "-NoProfile",
     "-NonInteractive",
     "-ExecutionPolicy",
@@ -42,30 +41,38 @@ function Invoke-PieGreenSmoke {
     $Mode
   )
 
-  $P = Start-Process -FilePath "powershell.exe" `
-    -ArgumentList $ArgList `
-    -Wait `
-    -PassThru `
-    -RedirectStandardOutput $OutFile `
-    -RedirectStandardError $ErrFile
+  $Psi = [System.Diagnostics.ProcessStartInfo]::new()
+  $Psi.FileName = "powershell.exe"
+  $Psi.UseShellExecute = $false
+  $Psi.CreateNoWindow = $true
+  $Psi.RedirectStandardOutput = $true
+  $Psi.RedirectStandardError = $true
+  $Psi.Arguments = (($Args | ForEach-Object { Quote-Arg ([string]$_) }) -join " ")
 
-  $Stdout = ""
-  $Stderr = ""
+  $P = [System.Diagnostics.Process]::new()
+  $P.StartInfo = $Psi
 
-  if(Test-Path -LiteralPath $OutFile -PathType Leaf){
-    $Stdout = Get-Content -LiteralPath $OutFile -Raw
-  }
+  [void]$P.Start()
+  $Stdout = [string]$P.StandardOutput.ReadToEnd()
+  $Stderr = [string]$P.StandardError.ReadToEnd()
+  $P.WaitForExit()
 
-  if(Test-Path -LiteralPath $ErrFile -PathType Leaf){
-    $Stderr = Get-Content -LiteralPath $ErrFile -Raw
-  }
+  $Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+  $TempRoot = Join-Path $env:TEMP "pie_green_audit"
+  New-Item -ItemType Directory -Force -Path $TempRoot | Out-Null
+
+  $OutFile = Join-Path $TempRoot ($Name + "_stdout.txt")
+  $ErrFile = Join-Path $TempRoot ($Name + "_stderr.txt")
+
+  [System.IO.File]::WriteAllText($OutFile,($Stdout.Replace("`r`n","`n").Replace("`r","`n")),$Utf8NoBom)
+  [System.IO.File]::WriteAllText($ErrFile,($Stderr.Replace("`r`n","`n").Replace("`r","`n")),$Utf8NoBom)
 
   return [ordered]@{
     name = $Name
     mode = $Mode
     exit_code = [int]$P.ExitCode
-    stdout_sha256 = $(if(Test-Path -LiteralPath $OutFile -PathType Leaf){ (Get-FileHash -Algorithm SHA256 -LiteralPath $OutFile).Hash.ToLowerInvariant() } else { "" })
-    stderr_sha256 = $(if(Test-Path -LiteralPath $ErrFile -PathType Leaf){ (Get-FileHash -Algorithm SHA256 -LiteralPath $ErrFile).Hash.ToLowerInvariant() } else { "" })
+    stdout_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $OutFile).Hash.ToLowerInvariant()
+    stderr_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $ErrFile).Hash.ToLowerInvariant()
     stdout_first_1000 = $(if($Stdout.Length -gt 1000){ $Stdout.Substring(0,1000) } else { $Stdout })
     stderr_first_1000 = $(if($Stderr.Length -gt 1000){ $Stderr.Substring(0,1000) } else { $Stderr })
   }
@@ -98,6 +105,7 @@ $ExpectedCommands = @(
   "pie green list",
   "pie green evidence",
   "pie green manifest",
+  "pie green audit",
   "pie green governance",
   "pie green governance-full",
   "pie green full"
@@ -118,7 +126,7 @@ foreach($Cmd in $ManifestCommands){
 }
 
 $CliRaw = Get-Content -LiteralPath $CliPath -Raw
-foreach($Mode in @("status","list","evidence","manifest","governance","governance-full","full")){
+foreach($Mode in @("status","list","evidence","manifest","audit","governance","governance-full","full")){
   $Needle = 'if($ModeArg -eq "' + $Mode + '")'
   if($CliRaw -notlike ("*" + $Needle + "*")){
     $Findings += [ordered]@{ code = "CLI_ROUTE_MISSING"; detail = $Needle }
@@ -163,7 +171,7 @@ $Audit = [ordered]@{
 }
 
 $Json = $Audit | ConvertTo-Json -Depth 50
-$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 $Clean = $Json.Replace("`r`n","`n").Replace("`r","`n")
 if(-not $Clean.EndsWith("`n")){ $Clean += "`n" }
 
