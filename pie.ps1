@@ -99,11 +99,12 @@ if($Command -eq "green"){
         try {
           $S = Get-Content -LiteralPath $SummaryPath -Raw | ConvertFrom-Json
 
-          if($null -ne $S.schema){ Write-Host ("schema: " + [string]$S.schema) }
-          if($null -ne $S.mode){ Write-Host ("mode: " + [string]$S.mode) }
-          if($null -ne $S.status){ Write-Host ("status: " + [string]$S.status) }
-          if($null -ne $S.selftest_count){ Write-Host ("selftest_count: " + [string]$S.selftest_count) }
-          if($null -ne $S.freeze_utc){ Write-Host ("freeze_utc: " + [string]$S.freeze_utc) }
+          foreach($Field in @("schema","mode","status","selftest_count","freeze_utc","utc","created_utc")){
+            $Prop = $S.PSObject.Properties[$Field]
+            if($null -ne $Prop){
+              Write-Host ($Field + ": " + [string]$Prop.Value)
+            }
+          }
         }
         catch {
           Write-Host ("summary_parse: failed :: " + $_.Exception.Message) -ForegroundColor Yellow
@@ -845,6 +846,7 @@ switch($Command.ToLowerInvariant()){
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
 
 
 
