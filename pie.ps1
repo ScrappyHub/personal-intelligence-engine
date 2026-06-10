@@ -59,7 +59,92 @@ if($Command -eq "green"){
       -RepoRoot $RepoRoot
     exit $LASTEXITCODE
   }
-  if($ModeArg -eq "list"){
+    if($ModeArg -eq "evidence"){
+    function Get-LatestGreenFreeze {
+      param(
+        [Parameter(Mandatory=$true)][string]$Prefix
+      )
+
+      $FreezeRoot = Join-Path $RepoRoot "proofs\freeze"
+
+      if(-not (Test-Path -LiteralPath $FreezeRoot -PathType Container)){
+        return $null
+      }
+
+      return Get-ChildItem -LiteralPath $FreezeRoot -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like ($Prefix + "*") } |
+        Sort-Object Name -Descending |
+        Select-Object -First 1
+    }
+
+    function Write-FreezeEvidence {
+      param(
+        [Parameter(Mandatory=$true)][string]$Label,
+        [AllowNull()]$FreezeDir
+      )
+
+      Write-Host ("[" + $Label + "]") -ForegroundColor Cyan
+
+      if($null -eq $FreezeDir){
+        Write-Host "freeze: none"
+        return
+      }
+
+      Write-Host ("freeze: " + $FreezeDir.FullName)
+
+      $SummaryPath = Join-Path $FreezeDir.FullName "FREEZE_SUMMARY.json"
+      if(Test-Path -LiteralPath $SummaryPath -PathType Leaf){
+        Write-Host ("summary: " + $SummaryPath)
+
+        try {
+          $S = Get-Content -LiteralPath $SummaryPath -Raw | ConvertFrom-Json
+
+          if($null -ne $S.schema){ Write-Host ("schema: " + [string]$S.schema) }
+          if($null -ne $S.mode){ Write-Host ("mode: " + [string]$S.mode) }
+          if($null -ne $S.status){ Write-Host ("status: " + [string]$S.status) }
+          if($null -ne $S.selftest_count){ Write-Host ("selftest_count: " + [string]$S.selftest_count) }
+          if($null -ne $S.freeze_utc){ Write-Host ("freeze_utc: " + [string]$S.freeze_utc) }
+        }
+        catch {
+          Write-Host ("summary_parse: failed :: " + $_.Exception.Message) -ForegroundColor Yellow
+        }
+      }
+      else {
+        Write-Host "summary: missing" -ForegroundColor Yellow
+      }
+
+      $ShaPath = Join-Path $FreezeDir.FullName "sha256sums.txt"
+      if(Test-Path -LiteralPath $ShaPath -PathType Leaf){
+        $Hash = Get-FileHash -Algorithm SHA256 -LiteralPath $ShaPath
+        Write-Host ("sha256sums: " + $ShaPath)
+        Write-Host ("sha256sums_sha256: " + $Hash.Hash.ToLowerInvariant())
+      }
+      else {
+        Write-Host "sha256sums: missing" -ForegroundColor Yellow
+      }
+
+      $ReceiptsPath = Join-Path $FreezeDir.FullName "child_receipts.ndjson"
+      if(Test-Path -LiteralPath $ReceiptsPath -PathType Leaf){
+        $ReceiptCount = @(Get-Content -LiteralPath $ReceiptsPath).Count
+        Write-Host ("child_receipts: " + $ReceiptsPath)
+        Write-Host ("child_receipt_count: " + [string]$ReceiptCount)
+      }
+      else {
+        Write-Host "child_receipts: missing" -ForegroundColor Yellow
+      }
+    }
+
+    Write-Host "PIE_GREEN_EVIDENCE" -ForegroundColor Cyan
+
+    $LatestFull = Get-LatestGreenFreeze -Prefix "pie_tier0_green_"
+    $LatestGovernance = Get-LatestGreenFreeze -Prefix "pie_governance_green_"
+
+    Write-FreezeEvidence -Label "latest_full_green" -FreezeDir $LatestFull
+    Write-FreezeEvidence -Label "latest_governance_green" -FreezeDir $LatestGovernance
+
+    exit 0
+  }
+if($ModeArg -eq "list"){
     $ManifestPath = Join-Path $RepoRoot "docs\PIE_GREEN_COMMANDS.manifest.json"
 
     if(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)){
@@ -760,6 +845,7 @@ switch($Command.ToLowerInvariant()){
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
 
 
 
