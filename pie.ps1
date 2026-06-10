@@ -53,7 +53,13 @@ if($Command -eq "green"){
     throw "PIE_GREEN_USAGE: pie green governance | pie green governance-full | pie green full"
   }
 
-      if($ModeArg -eq "manifest"){
+        if($ModeArg -eq "audit"){
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+      -File (Join-Path $RepoRoot "scripts\pie_green_audit_v1.ps1") `
+      -RepoRoot $RepoRoot
+    exit $LASTEXITCODE
+  }
+if($ModeArg -eq "manifest"){
     & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
       -File (Join-Path $RepoRoot "scripts\pie_green_manifest_validate_v1.ps1") `
       -RepoRoot $RepoRoot
