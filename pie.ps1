@@ -59,6 +59,29 @@ if($Command -eq "green"){
       -RepoRoot $RepoRoot
     exit $LASTEXITCODE
   }
+  if($ModeArg -eq "list"){
+    $ManifestPath = Join-Path $RepoRoot "docs\PIE_GREEN_COMMANDS.manifest.json"
+
+    if(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)){
+      throw "PIE_GREEN_LIST_MANIFEST_MISSING"
+    }
+
+    $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
+
+    if($Manifest.schema -ne "pie.green.commands.manifest.v1"){
+      throw "PIE_GREEN_LIST_MANIFEST_SCHEMA_BAD"
+    }
+
+    Write-Host "PIE_GREEN_LIST" -ForegroundColor Cyan
+    Write-Host ("manifest: " + $ManifestPath)
+    Write-Host ("commands: " + [string]@($Manifest.commands).Count)
+
+    foreach($C in @($Manifest.commands)){
+      Write-Host ("- " + [string]$C.command + " :: " + [string]$C.purpose)
+    }
+
+    exit 0
+  }
 if($ModeArg -eq "status"){
     $Branch = (& git -C $RepoRoot rev-parse --abbrev-ref HEAD 2>$null)
     $Commit = (& git -C $RepoRoot rev-parse --short HEAD 2>$null)
@@ -737,6 +760,7 @@ switch($Command.ToLowerInvariant()){
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
 
 
 
