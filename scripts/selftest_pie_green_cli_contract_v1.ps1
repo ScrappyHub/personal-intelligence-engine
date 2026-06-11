@@ -56,11 +56,11 @@ function Invoke-CommandCapture {
   $Stderr = [string]""
 
   if(Test-Path -LiteralPath $OutPath -PathType Leaf){
-    $Stdout = [string](Get-Content -LiteralPath $OutPath -Raw)
+    $Stdout = [System.IO.File]::ReadAllText($OutPath,[System.Text.UTF8Encoding]::new($false))
   }
 
   if(Test-Path -LiteralPath $ErrPath -PathType Leaf){
-    $Stderr = [string](Get-Content -LiteralPath $ErrPath -Raw)
+    $Stderr = [System.IO.File]::ReadAllText($ErrPath,[System.Text.UTF8Encoding]::new($false))
   }
 
   if($P.ExitCode -ne 0){
@@ -81,8 +81,8 @@ function Invoke-CommandCapture {
     exit_code = [int]$P.ExitCode
     stdout_path = $OutPath
     stderr_path = $ErrPath
-    stdout_chars = $Stdout.Length
-    stderr_chars = $Stderr.Length
+    stdout_chars = $(if(Test-Path -LiteralPath $OutPath -PathType Leaf){ [int64](Get-Item -LiteralPath $OutPath).Length } else { 0 })
+    stderr_chars = $(if(Test-Path -LiteralPath $ErrPath -PathType Leaf){ [int64](Get-Item -LiteralPath $ErrPath).Length } else { 0 })
     silent_required = [bool]$RequireSilent
   }
 }
@@ -154,4 +154,5 @@ Write-Utf8NoBomLf -Path $LatestSummaryPath -Text ($Summary | ConvertTo-Json -Dep
 
 Write-Host "PIE_GREEN_CLI_CONTRACT_SELFTEST_OK" -ForegroundColor Green
 Write-Host ("summary: " + $SummaryPath)
+
 
