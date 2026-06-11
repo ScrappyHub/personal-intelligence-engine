@@ -1,0 +1,44 @@
+{
+    "schema":  "pie.green.final.snapshot.v1",
+    "created_utc":  "2026-06-11T16:56:40.8205431Z",
+    "repo_root":  "C:\\dev\\pie",
+    "branch":  "main",
+    "commit":  "52638b7",
+    "git_status_clean":  true,
+    "git_status":  [
+
+                   ],
+    "latest_full_green":  {
+                              "freeze":  "C:\\dev\\pie\\proofs\\freeze\\pie_tier0_green_20260608_174605_912",
+                              "summary":  "C:\\dev\\pie\\proofs\\freeze\\pie_tier0_green_20260608_174605_912\\FREEZE_SUMMARY.json",
+                              "summary_schema":  "pie.tier0.full_green.summary.v1",
+                              "status":  "PIE_TIER0_FULL_GREEN_OK",
+                              "selftest_count":  29,
+                              "created_utc":  "2026-06-08T21:59:21.5526264Z",
+                              "sha256sums_path":  "C:\\dev\\pie\\proofs\\freeze\\pie_tier0_green_20260608_174605_912\\sha256sums.txt",
+                              "sha256sums_sha256":  "67aa6c22095f87de087911d84ae6451feef33cdc1418ef8909e56b4f43125895",
+                              "child_receipts_path":  "C:\\dev\\pie\\proofs\\freeze\\pie_tier0_green_20260608_174605_912\\child_receipts.ndjson",
+                              "child_receipt_count":  29
+                          },
+    "latest_governance_green":  {
+                                    "freeze":  "C:\\dev\\pie\\proofs\\freeze\\pie_governance_green_20260608_215811_636",
+                                    "summary":  "C:\\dev\\pie\\proofs\\freeze\\pie_governance_green_20260608_215811_636\\FREEZE_SUMMARY.json",
+                                    "summary_schema":  "pie.governance.green.freeze.summary.v1",
+                                    "mode":  "trusted_baseline_lifecycle",
+                                    "status":  "ok",
+                                    "selftest_count":  2,
+                                    "created_utc":  "2026-06-09T02:00:43.7259052Z",
+                                    "sha256sums_path":  "C:\\dev\\pie\\proofs\\freeze\\pie_governance_green_20260608_215811_636\\sha256sums.txt",
+                                    "sha256sums_sha256":  "d31ad1fd227ce9c1e05fb63d110849c0133ff4b03f712c93db42e97eeae015b0",
+                                    "child_receipts_path":  "C:\\dev\\pie\\proofs\\freeze\\pie_governance_green_20260608_215811_636\\child_receipts.ndjson",
+                                    "child_receipt_count":  2
+                                },
+    "latest_green_audit":  {
+                               "path":  "C:\\dev\\pie\\runs\\green_audit\\green_audit_20260610_233719_647.json",
+                               "sha256":  "54ac52161b405dff8f073efdf5aeb56f33ebb293b61c0f94e0a6f721f410106c",
+                               "status":  "ok",
+                               "manifest_command_count":  8,
+                               "finding_count":  0,
+                               "created_utc":  "2026-06-11T03:37:19.6516450Z"
+                           }
+}
