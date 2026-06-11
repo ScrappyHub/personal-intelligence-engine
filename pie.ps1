@@ -38,7 +38,17 @@ if($Command -eq "green"){
   # include the command token itself. Accept both:
   #   pie green governance        -> $Command=green, $args=green,governance
   #   .\pie.ps1 green governance  -> $Command=green, $args=governance
-  $RemainingArgs = @($args)
+  $RemainingArgs = @()
+
+  if(-not [string]::IsNullOrWhiteSpace($Subcommand)){
+    $RemainingArgs = @($Subcommand)
+  }
+  else {
+    $ArgsVar = Get-Variable -Name args -Scope Local -ErrorAction SilentlyContinue
+    if($null -ne $ArgsVar){
+      $RemainingArgs = @($ArgsVar.Value)
+    }
+  }
 
   if($RemainingArgs.Count -ge 1 -and ([string]$RemainingArgs[0]) -eq $Command){
     if($RemainingArgs.Count -ge 2){
@@ -50,7 +60,7 @@ if($Command -eq "green"){
   }
 
   if([string]::IsNullOrWhiteSpace($ModeArg)){
-    throw "PIE_GREEN_USAGE: pie green governance | pie green governance-full | pie green full"
+    throw "PIE_GREEN_USAGE: pie green status | pie green list | pie green evidence | pie green manifest | pie green audit | pie green governance | pie green governance-full | pie green full"
   }
 
         if($ModeArg -eq "audit"){
@@ -852,6 +862,7 @@ switch($Command.ToLowerInvariant()){
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
+
 
 
 
