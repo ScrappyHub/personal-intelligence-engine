@@ -21,7 +21,12 @@ function Fail {
 
 function Quote-Arg {
   param([Parameter(Mandatory=$true)][string]$Value)
-  return '"' + ($Value.Replace('\','\\').Replace('"','\"')) + '"'
+
+  if($Value -notmatch '[\s"]'){
+    return $Value
+  }
+
+  return '"' + ($Value.Replace('"','\"')) + '"'
 }
 
 function Invoke-PieGreenSmoke {
@@ -155,6 +160,7 @@ $LatestPath = Join-Path $OutDir "latest_green_audit.json"
 
 $Audit = [ordered]@{
   schema = "pie.green.audit.v1"
+  status = $(if(@($Findings).Count -eq 0){ "ok" } else { "findings" })
   created_utc = [DateTime]::UtcNow.ToString("o")
   repo_root = $RepoRoot
   branch = $Branch
@@ -188,7 +194,4 @@ if(@($Findings).Count -gt 0){
   exit 1
 }
 
-Write-Host "PIE_GREEN_AUDIT_OK" -ForegroundColor Green
-Write-Host ("audit: " + $OutPath)
-Write-Host ("latest: " + $LatestPath)
-Write-Host ("commands: " + [string]@($Manifest.commands).Count)
+exit 0
