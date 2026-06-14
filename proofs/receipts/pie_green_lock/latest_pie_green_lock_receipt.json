@@ -1,0 +1,18 @@
+{
+    "schema":  "pie.green.lock.receipt.v1",
+    "created_utc":  "2026-06-14T15:03:44.5138400Z",
+    "repo_root":  "C:\\dev\\pie",
+    "head_branch":  "main",
+    "head_commit":  "b8df6f8",
+    "head_commit_long":  "b8df6f8fcfa06b7f02e6f964278ecc66d130844d",
+    "lock_tag":  "pie_green_lock_b8df6f8",
+    "lock_tag_ref":  "5bc6c4a80487326e4c3cd748da5d871784a5ae9f",
+    "lock_commit":  "b8df6f8fcfa06b7f02e6f964278ecc66d130844d",
+    "remote_tag_present":  true,
+    "latest_final_snapshot_pointer":  "C:\\dev\\pie\\proofs\\receipts\\pie_green_final_snapshot\\latest_pie_green_final_snapshot.json",
+    "latest_final_snapshot_schema":  "pie.green.final.snapshot.v2",
+    "latest_final_snapshot_commit":  "c1e7347",
+    "latest_green_audit_path":  "C:\\dev\\pie\\runs\\green_audit\\green_audit_20260611_211350_535.json",
+    "latest_green_audit_status":  "ok",
+    "latest_green_audit_finding_count":  0
+}
