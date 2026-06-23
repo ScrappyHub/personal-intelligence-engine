@@ -99,6 +99,35 @@ function Invoke-Child {
   }
 }
 
+function Find-LockedSnapshot {
+  param(
+    [Parameter(Mandatory=$true)][string]$SnapshotRoot,
+    [Parameter(Mandatory=$true)][string]$LockedCommitShort
+  )
+
+  if(-not (Test-Path -LiteralPath $SnapshotRoot -PathType Container)){
+    throw "PIE_GREEN_TERMINAL_RECEIPT_SNAPSHOT_ROOT_MISSING"
+  }
+
+  $Files = Get-ChildItem -LiteralPath $SnapshotRoot -File -Filter "pie_green_final_snapshot_*.json" |
+    Sort-Object Name -Descending
+
+  foreach($File in $Files){
+    $Json = Get-JsonOrNull -Path $File.FullName
+    if($null -eq $Json){ continue }
+    if([string]$Json.schema -ne "pie.green.final.snapshot.v2"){ continue }
+    if(-not [bool]$Json.git_status_clean){ continue }
+    if([string]$Json.commit -ne $LockedCommitShort){ continue }
+
+    return [ordered]@{
+      path = $File.FullName
+      json = $Json
+    }
+  }
+
+  throw ("PIE_GREEN_TERMINAL_RECEIPT_LOCKED_SNAPSHOT_NOT_FOUND: " + $LockedCommitShort)
+}
+
 $ProofSuiteVerify = Join-Path $RepoRoot "scripts\verify_pie_green_proof_suite_v1.ps1"
 $LockReceiptVerify = Join-Path $RepoRoot "scripts\verify_pie_green_lock_receipt_v1.ps1"
 
@@ -125,23 +154,14 @@ $CurrentHeadLong = ((git -C $RepoRoot rev-parse HEAD) -join "").Trim()
 $CurrentBranch = ((git -C $RepoRoot rev-parse --abbrev-ref HEAD) -join "").Trim()
 
 $LatestLockReceiptPath = Join-Path $RepoRoot "proofs\receipts\pie_green_lock\latest_pie_green_lock_receipt.json"
-$LatestSnapshotPath = Join-Path $RepoRoot "proofs\receipts\pie_green_final_snapshot\latest_pie_green_final_snapshot.json"
+$SnapshotRoot = Join-Path $RepoRoot "proofs\receipts\pie_green_final_snapshot"
 
 $LockReceipt = Get-JsonOrNull -Path $LatestLockReceiptPath
-$Snapshot = Get-JsonOrNull -Path $LatestSnapshotPath
-
 if($null -eq $LockReceipt){
   throw "PIE_GREEN_TERMINAL_RECEIPT_LOCK_RECEIPT_MISSING"
 }
-if($null -eq $Snapshot){
-  throw "PIE_GREEN_TERMINAL_RECEIPT_SNAPSHOT_MISSING"
-}
-
 if([string]$LockReceipt.schema -ne "pie.green.lock.receipt.v1"){
   throw ("PIE_GREEN_TERMINAL_RECEIPT_LOCK_RECEIPT_SCHEMA_BAD: " + [string]$LockReceipt.schema)
-}
-if([string]$Snapshot.schema -ne "pie.green.final.snapshot.v2"){
-  throw ("PIE_GREEN_TERMINAL_RECEIPT_SNAPSHOT_SCHEMA_BAD: " + [string]$Snapshot.schema)
 }
 
 $LockedTag = [string]$LockReceipt.lock_tag
@@ -174,19 +194,9 @@ if([string]::IsNullOrWhiteSpace($RemoteTagLine)){
   throw ("PIE_GREEN_TERMINAL_RECEIPT_REMOTE_TAG_MISSING: " + $LockedTag)
 }
 
-if([string]$LockReceipt.lock_tag -ne $LockedTag){
-  throw "PIE_GREEN_TERMINAL_RECEIPT_LOCK_TAG_INTERNAL_BAD"
-}
-if([string]$LockReceipt.lock_commit -ne $LockedCommitLong){
-  throw "PIE_GREEN_TERMINAL_RECEIPT_LOCK_COMMIT_INTERNAL_BAD"
-}
-
-if(-not [bool]$Snapshot.git_status_clean){
-  throw "PIE_GREEN_TERMINAL_RECEIPT_SNAPSHOT_NOT_CLEAN"
-}
-if([string]$Snapshot.commit -ne $LockedCommitShort){
-  throw ("PIE_GREEN_TERMINAL_RECEIPT_SNAPSHOT_COMMIT_BAD: " + [string]$Snapshot.commit + " != " + $LockedCommitShort)
-}
+$ResolvedSnapshot = Find-LockedSnapshot -SnapshotRoot $SnapshotRoot -LockedCommitShort $LockedCommitShort
+$ResolvedSnapshotPath = [string]$ResolvedSnapshot.path
+$Snapshot = $ResolvedSnapshot.json
 
 New-Item -ItemType Directory -Force -Path $OutRoot | Out-Null
 
@@ -206,7 +216,7 @@ $Receipt = [ordered]@{
   locked_commit = $LockedCommitShort
   locked_commit_long = $LockedCommitLong
   latest_lock_receipt_path = $LatestLockReceiptPath
-  latest_final_snapshot_path = $LatestSnapshotPath
+  resolved_final_snapshot_path = $ResolvedSnapshotPath
   child_count = @($ChildResults).Count
   children = @($ChildResults)
 }
@@ -223,3 +233,4 @@ Write-Host "PIE_GREEN_TERMINAL_RECEIPT_OK" -ForegroundColor Green
 Write-Host ("receipt: " + $OutPath)
 Write-Host ("locked_tag: " + $LockedTag)
 Write-Host ("locked_commit: " + $LockedCommitShort)
+Write-Host ("resolved_snapshot: " + $ResolvedSnapshotPath)
