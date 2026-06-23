@@ -120,27 +120,9 @@ if(@($Tracked).Count -gt 0){
   throw ("PIE_GREEN_TERMINAL_RECEIPT_REQUIRES_CLEAN_TREE: " + ($Tracked -join " | "))
 }
 
-New-Item -ItemType Directory -Force -Path $OutRoot | Out-Null
-
-$HeadShort = ((git -C $RepoRoot rev-parse --short HEAD) -join "").Trim()
-$HeadLong = ((git -C $RepoRoot rev-parse HEAD) -join "").Trim()
-$Branch = ((git -C $RepoRoot rev-parse --abbrev-ref HEAD) -join "").Trim()
-$Tag = "pie_green_lock_" + $HeadShort
-
-$LocalTag = ((git -C $RepoRoot tag --list $Tag) -join "").Trim()
-if([string]::IsNullOrWhiteSpace($LocalTag)){
-  throw "PIE_GREEN_TERMINAL_RECEIPT_LOCAL_TAG_MISSING"
-}
-
-$TagTarget = ((git -C $RepoRoot rev-list -n 1 $Tag) -join "").Trim()
-if($TagTarget -ne $HeadLong){
-  throw ("PIE_GREEN_TERMINAL_RECEIPT_TAG_TARGET_BAD: " + $TagTarget + " != " + $HeadLong)
-}
-
-$RemoteTagLine = ((git -C $RepoRoot ls-remote --tags origin ("refs/tags/" + $Tag)) -join "").Trim()
-if([string]::IsNullOrWhiteSpace($RemoteTagLine)){
-  throw "PIE_GREEN_TERMINAL_RECEIPT_REMOTE_TAG_MISSING"
-}
+$CurrentHeadShort = ((git -C $RepoRoot rev-parse --short HEAD) -join "").Trim()
+$CurrentHeadLong = ((git -C $RepoRoot rev-parse HEAD) -join "").Trim()
+$CurrentBranch = ((git -C $RepoRoot rev-parse --abbrev-ref HEAD) -join "").Trim()
 
 $LatestLockReceiptPath = Join-Path $RepoRoot "proofs\receipts\pie_green_lock\latest_pie_green_lock_receipt.json"
 $LatestSnapshotPath = Join-Path $RepoRoot "proofs\receipts\pie_green_final_snapshot\latest_pie_green_final_snapshot.json"
@@ -158,22 +140,55 @@ if($null -eq $Snapshot){
 if([string]$LockReceipt.schema -ne "pie.green.lock.receipt.v1"){
   throw ("PIE_GREEN_TERMINAL_RECEIPT_LOCK_RECEIPT_SCHEMA_BAD: " + [string]$LockReceipt.schema)
 }
-if([string]$LockReceipt.lock_tag -ne $Tag){
-  throw ("PIE_GREEN_TERMINAL_RECEIPT_LOCK_TAG_BAD: " + [string]$LockReceipt.lock_tag + " != " + $Tag)
-}
-if([string]$LockReceipt.lock_commit -ne $HeadLong){
-  throw ("PIE_GREEN_TERMINAL_RECEIPT_LOCK_COMMIT_BAD: " + [string]$LockReceipt.lock_commit + " != " + $HeadLong)
-}
-
 if([string]$Snapshot.schema -ne "pie.green.final.snapshot.v2"){
   throw ("PIE_GREEN_TERMINAL_RECEIPT_SNAPSHOT_SCHEMA_BAD: " + [string]$Snapshot.schema)
 }
+
+$LockedTag = [string]$LockReceipt.lock_tag
+$LockedCommitLong = [string]$LockReceipt.lock_commit
+
+if([string]::IsNullOrWhiteSpace($LockedTag)){
+  throw "PIE_GREEN_TERMINAL_RECEIPT_LOCK_TAG_MISSING"
+}
+if([string]::IsNullOrWhiteSpace($LockedCommitLong)){
+  throw "PIE_GREEN_TERMINAL_RECEIPT_LOCK_COMMIT_MISSING"
+}
+
+$LockedCommitShort = ((git -C $RepoRoot rev-parse --short $LockedCommitLong) -join "").Trim()
+if([string]::IsNullOrWhiteSpace($LockedCommitShort)){
+  throw "PIE_GREEN_TERMINAL_RECEIPT_LOCK_COMMIT_SHORT_MISSING"
+}
+
+$LocalTag = ((git -C $RepoRoot tag --list $LockedTag) -join "").Trim()
+if([string]::IsNullOrWhiteSpace($LocalTag)){
+  throw ("PIE_GREEN_TERMINAL_RECEIPT_LOCAL_TAG_MISSING: " + $LockedTag)
+}
+
+$TagTarget = ((git -C $RepoRoot rev-list -n 1 $LockedTag) -join "").Trim()
+if($TagTarget -ne $LockedCommitLong){
+  throw ("PIE_GREEN_TERMINAL_RECEIPT_TAG_TARGET_BAD: " + $TagTarget + " != " + $LockedCommitLong)
+}
+
+$RemoteTagLine = ((git -C $RepoRoot ls-remote --tags origin ("refs/tags/" + $LockedTag)) -join "").Trim()
+if([string]::IsNullOrWhiteSpace($RemoteTagLine)){
+  throw ("PIE_GREEN_TERMINAL_RECEIPT_REMOTE_TAG_MISSING: " + $LockedTag)
+}
+
+if([string]$LockReceipt.lock_tag -ne $LockedTag){
+  throw "PIE_GREEN_TERMINAL_RECEIPT_LOCK_TAG_INTERNAL_BAD"
+}
+if([string]$LockReceipt.lock_commit -ne $LockedCommitLong){
+  throw "PIE_GREEN_TERMINAL_RECEIPT_LOCK_COMMIT_INTERNAL_BAD"
+}
+
 if(-not [bool]$Snapshot.git_status_clean){
   throw "PIE_GREEN_TERMINAL_RECEIPT_SNAPSHOT_NOT_CLEAN"
 }
-if([string]$Snapshot.commit -ne $HeadShort){
-  throw ("PIE_GREEN_TERMINAL_RECEIPT_SNAPSHOT_COMMIT_BAD: " + [string]$Snapshot.commit + " != " + $HeadShort)
+if([string]$Snapshot.commit -ne $LockedCommitShort){
+  throw ("PIE_GREEN_TERMINAL_RECEIPT_SNAPSHOT_COMMIT_BAD: " + [string]$Snapshot.commit + " != " + $LockedCommitShort)
 }
+
+New-Item -ItemType Directory -Force -Path $OutRoot | Out-Null
 
 $ChildResults = @(
   [pscustomobject](Invoke-Child -Name "verify_green_proof_suite" -ScriptPath $ProofSuiteVerify -SuccessToken "PIE_GREEN_PROOF_SUITE_VERIFY_OK")
@@ -184,10 +199,12 @@ $Receipt = [ordered]@{
   schema = "pie.green.terminal.receipt.v1"
   created_utc = [DateTime]::UtcNow.ToString("o")
   repo_root = $RepoRoot
-  branch = $Branch
-  head_commit = $HeadShort
-  head_commit_long = $HeadLong
-  lock_tag = $Tag
+  current_branch = $CurrentBranch
+  current_head_commit = $CurrentHeadShort
+  current_head_commit_long = $CurrentHeadLong
+  locked_tag = $LockedTag
+  locked_commit = $LockedCommitShort
+  locked_commit_long = $LockedCommitLong
   latest_lock_receipt_path = $LatestLockReceiptPath
   latest_final_snapshot_path = $LatestSnapshotPath
   child_count = @($ChildResults).Count
@@ -204,3 +221,5 @@ Write-Utf8NoBomLf -Path $LatestPath -Text $Json
 
 Write-Host "PIE_GREEN_TERMINAL_RECEIPT_OK" -ForegroundColor Green
 Write-Host ("receipt: " + $OutPath)
+Write-Host ("locked_tag: " + $LockedTag)
+Write-Host ("locked_commit: " + $LockedCommitShort)
