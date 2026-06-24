@@ -1,0 +1,38 @@
+PIE_INTENT_RECORD_OK: 7aa013e2fd27a04633518041
+PIE_INTENT_RESUME_OK: C:\dev\pie\runs\pie_goal_lineage_selftest\intent_resume\intent_resume_20260624_154921_999.json
+intent_id: 7aa013e2fd27a04633518041
+sequence: repo.status -> repo.diff
+NO_EXECUTION_PERFORMED
+PIE_ORCH_DECISION_OK: C:\dev\pie\runs\pie_goal_lineage_selftest\orchestration_decisions\orchestration_decision_20260624_154923_450.json
+selected_chain: repo.health.basic
+PIE_ORCH_PLAN_OK: C:\dev\pie\runs\pie_goal_lineage_selftest\orchestration\orchestration_plan_20260624_154924_858.json
+PIE_ORCH_STEP_START: repo.status
+PIE_CAPABILITY_SELECTED: repo.status
+working_directory: C:\dev\pie
+command: git status
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_goal_lineage_selftest\execution\stdout_20260624_154933_331.txt
+stderr: C:\dev\pie\runs\pie_goal_lineage_selftest\execution\stderr_20260624_154933_331.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_goal_lineage_selftest\snapshots\snapshot_20260624_154935_760\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CAPABILITY_OK: repo.status
+PIE_ORCH_STEP_OK: repo.status
+PIE_ORCH_STEP_START: repo.diff
+PIE_CAPABILITY_SELECTED: repo.diff
+working_directory: C:\dev\pie
+command: git diff
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_goal_lineage_selftest\execution\stdout_20260624_154947_338.txt
+stderr: C:\dev\pie\runs\pie_goal_lineage_selftest\execution\stderr_20260624_154947_338.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_goal_lineage_selftest\snapshots\snapshot_20260624_154949_727\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CAPABILITY_OK: repo.diff
+PIE_ORCH_STEP_OK: repo.diff
+PIE_ORCH_OK: repo.health.basic
+PIE_ORCH_SELECT_OK: repo.health.basic
+PIE_EXECUTION_REPLAY_OK: C:\dev\pie\runs\pie_goal_lineage_selftest\replay\execution_replay_20260624_154955_312.json
+PIE_REASON_TRACE_OK: C:\dev\pie\runs\pie_goal_lineage_selftest\reason_traces\reason_trace_20260624_154957_744.json
+PIE_EXPERIENCE_RECORD_OK: C:\dev\pie\memory\experience\experience.ndjson
+PIE_GOAL_LINEAGE_OK: C:\dev\pie\runs\pie_goal_lineage_selftest\goal_lineage\goal_lineage_20260624_155000_333.json
+lineage_id: 05d16ff571136bf907313a8b
+PIE_GOAL_LINEAGE_SELFTEST_OK
