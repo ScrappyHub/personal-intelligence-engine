@@ -9,6 +9,7 @@ $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 Set-Location $RepoRoot
 
 $OutRoot = Join-Path $RepoRoot "proofs\receipts\pie_green_terminal"
+$RunRoot = Join-Path $RepoRoot "runs\pie_green_terminal_receipt"
 $Enc = New-Object System.Text.UTF8Encoding($false)
 
 function Write-Utf8NoBomLf {
@@ -44,8 +45,8 @@ function Invoke-Child {
     [Parameter(Mandatory=$true)][string]$SuccessToken
   )
 
-  $StdoutPath = Join-Path $OutRoot ($Name + "_stdout.txt")
-  $StderrPath = Join-Path $OutRoot ($Name + "_stderr.txt")
+  $StdoutPath = Join-Path $RunRoot ($Name + "_stdout.txt")
+  $StderrPath = Join-Path $RunRoot ($Name + "_stderr.txt")
 
   $P = Start-Process -FilePath "powershell.exe" `
     -ArgumentList @(
@@ -199,6 +200,7 @@ $ResolvedSnapshotPath = [string]$ResolvedSnapshot.path
 $Snapshot = $ResolvedSnapshot.json
 
 New-Item -ItemType Directory -Force -Path $OutRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $RunRoot | Out-Null
 
 $ChildResults = @(
   [pscustomobject](Invoke-Child -Name "verify_green_proof_suite" -ScriptPath $ProofSuiteVerify -SuccessToken "PIE_GREEN_PROOF_SUITE_VERIFY_OK")
