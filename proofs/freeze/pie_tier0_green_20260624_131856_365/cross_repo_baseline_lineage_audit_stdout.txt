@@ -1,0 +1,60 @@
+PIE_CROSS_REPO_GRAPH_RECORD_OK: related_to
+source: C:\dev\pie
+target: C:\dev\pie
+PIE_REPO_TEMPLATE_RECORD_OK: pie.cross.repo.baseline.lineage.audit.selftest.v1
+PIE_CROSS_REPO_ROUTE_OK: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest\cross_repo_routes\cross_repo_route_20260624_133033_970.json
+edge_count: 14
+NO_EXECUTION_PERFORMED
+PIE_CROSS_REPO_EXEC_PLAN_OK: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest\cross_repo_exec_plans\cross_repo_exec_plan_20260624_133036_475.json
+repo_plan_count: 2
+NO_EXECUTION_PERFORMED
+PIE_CROSS_REPO_EXEC_PROPOSAL_OK: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest\cross_repo_execution\latest_cross_repo_execution_proposal.json
+PIE_CROSS_REPO_EXEC_STEP_START: repo.status :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_0\execution\stdout_20260624_133043_928.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_0\execution\stderr_20260624_133043_928.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_0\snapshots\snapshot_20260624_133046_215\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.status
+PIE_CROSS_REPO_EXEC_STEP_START: repo.diff :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_1\execution\stdout_20260624_133056_060.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_1\execution\stderr_20260624_133056_060.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_1\snapshots\snapshot_20260624_133058_371\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.diff
+PIE_CROSS_REPO_EXEC_STEP_START: repo.status :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_2\execution\stdout_20260624_133108_516.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_2\execution\stderr_20260624_133108_516.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_2\snapshots\snapshot_20260624_133110_779\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.status
+PIE_CROSS_REPO_EXEC_STEP_START: repo.diff :: C:\dev\pie
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_3\execution\stdout_20260624_133120_744.txt
+stderr: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_3\execution\stderr_20260624_133120_744.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest_xrepo_3\snapshots\snapshot_20260624_133123_030\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CROSS_REPO_EXEC_STEP_OK: repo.diff
+PIE_CROSS_REPO_EXECUTE_OK: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest\cross_repo_execution\latest_cross_repo_execution_summary.json
+PIE_CROSS_REPO_REPLAY_AGGREGATE_OK: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest\cross_repo_replay\cross_repo_replay_aggregate_20260624_133128_012.json
+child_count: 4
+PIE_CROSS_REPO_REGRESSION_REPLAY_OK: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest\cross_repo_regression\cross_repo_regression_replay_20260624_133129_217.json
+status: match
+finding_count: 0
+PIE_CROSS_REPO_BASELINE_PROMOTE_OK: C:\dev\pie\memory\baselines\cross_repo\selftest.cross_repo.lineage.old.v1.promotion.json
+baseline_id: selftest.cross_repo.lineage.old.v1
+aggregate_sha256: 8b469d31f9cd0b40ca0c617fc79337d3af0175ee339dd094dfb92602b85db4be
+PIE_CROSS_REPO_BASELINE_REVOKE_OK: C:\dev\pie\memory\baselines\cross_repo\selftest.cross_repo.lineage.old.v1.revocation.json
+baseline_id: selftest.cross_repo.lineage.old.v1
+reason_code: SUPERSEDED_BY_LINEAGE_AUDIT
+PIE_CROSS_REPO_BASELINE_REPLACE_OK: C:\dev\pie\memory\baselines\cross_repo\selftest.cross_repo.lineage.new.v1.replacement.json
+old_baseline_id: selftest.cross_repo.lineage.old.v1
+new_baseline_id: selftest.cross_repo.lineage.new.v1
+old_revoked: True
+PIE_CROSS_REPO_BASELINE_LINEAGE_AUDIT_OK: C:\dev\pie\runs\pie_cross_repo_baseline_lineage_audit_selftest\cross_repo_baseline_lineage_audit\baseline_lineage_audit_20260624_133134_271.json
+status: ok
+baseline_count: 2
+edge_count: 4
+PIE_CROSS_REPO_BASELINE_LINEAGE_AUDIT_SELFTEST_OK

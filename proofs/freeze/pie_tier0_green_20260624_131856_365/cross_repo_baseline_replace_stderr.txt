@@ -1,0 +1,9 @@
+PIE_BASELINE_REPLACE_EXPECT_PRE_REVOKE_FAIL
+At C:\dev\pie\scripts\selftest_pie_cross_repo_baseline_replace_v1.ps1:124 
+char:3
++   throw "PIE_BASELINE_REPLACE_EXPECT_PRE_REVOKE_FAIL"
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (PIE_BASELINE_RE...PRE_REVOK 
+   E_FAIL:String) [], RuntimeException
+    + FullyQualifiedErrorId : PIE_BASELINE_REPLACE_EXPECT_PRE_REVOKE_FAIL
+ 

@@ -1,0 +1,10 @@
+PIE_CAPABILITY_SELECTED: repo.status
+working_directory: C:\dev\pie
+command: git status
+PIE_EXEC_OK
+stdout: C:\dev\pie\runs\pie_capability_selftest\execution\stdout_20260624_132009_925.txt
+stderr: C:\dev\pie\runs\pie_capability_selftest\execution\stderr_20260624_132009_925.txt
+PIE_STATE_DIFF_OK: C:\dev\pie\runs\pie_capability_selftest\snapshots\snapshot_20260624_132012_456\diff_from_previous.json
+PIE_EXEC_WITH_SNAPSHOT_OK
+PIE_CAPABILITY_OK: repo.status
+PIE_CAPABILITY_SELFTEST_OK
