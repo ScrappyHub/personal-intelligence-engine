@@ -1,0 +1,36 @@
+{
+    "schema":  "pie.green.terminal.receipt.v1",
+    "created_utc":  "2026-06-24T01:53:59.3573055Z",
+    "repo_root":  "C:\\dev\\pie",
+    "current_branch":  "main",
+    "current_head_commit":  "d9ca3dc",
+    "current_head_commit_long":  "d9ca3dc088fdd887f07feabdb18f92b8e5fe78f4",
+    "locked_tag":  "pie_green_lock_f530d75",
+    "locked_commit":  "f530d75",
+    "locked_commit_long":  "f530d75adc574812336bbf6071e0ae8f187f9ab1",
+    "latest_lock_receipt_path":  "C:\\dev\\pie\\proofs\\receipts\\pie_green_lock\\latest_pie_green_lock_receipt.json",
+    "resolved_final_snapshot_path":  "C:\\dev\\pie\\proofs\\receipts\\pie_green_final_snapshot\\pie_green_final_snapshot_20260623_215353_931.json",
+    "child_count":  2,
+    "children":  [
+                     {
+                         "name":  "verify_green_proof_suite",
+                         "script":  "C:\\dev\\pie\\scripts\\verify_pie_green_proof_suite_v1.ps1",
+                         "exit_code":  0,
+                         "stdout_path":  "C:\\dev\\pie\\proofs\\receipts\\pie_green_terminal\\verify_green_proof_suite_stdout.txt",
+                         "stderr_path":  "C:\\dev\\pie\\proofs\\receipts\\pie_green_terminal\\verify_green_proof_suite_stderr.txt",
+                         "stdout_bytes":  153,
+                         "stderr_bytes":  0,
+                         "success_token":  "PIE_GREEN_PROOF_SUITE_VERIFY_OK"
+                     },
+                     {
+                         "name":  "verify_green_lock_receipt",
+                         "script":  "C:\\dev\\pie\\scripts\\verify_pie_green_lock_receipt_v1.ps1",
+                         "exit_code":  0,
+                         "stdout_path":  "C:\\dev\\pie\\proofs\\receipts\\pie_green_terminal\\verify_green_lock_receipt_stdout.txt",
+                         "stderr_path":  "C:\\dev\\pie\\proofs\\receipts\\pie_green_terminal\\verify_green_lock_receipt_stderr.txt",
+                         "stdout_bytes":  201,
+                         "stderr_bytes":  0,
+                         "success_token":  "PIE_GREEN_LOCK_RECEIPT_VERIFY_OK"
+                     }
+                 ]
+}
