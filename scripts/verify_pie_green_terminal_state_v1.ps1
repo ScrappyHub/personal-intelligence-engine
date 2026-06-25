@@ -59,15 +59,93 @@ function Get-LatestCompletedFreezeDir {
     Select-Object -First 1
 }
 
+function Find-MatchingLockReceipt {
+  param(
+    [Parameter(Mandatory=$true)][string]$LockRoot,
+    [Parameter(Mandatory=$true)][string]$LockedTag,
+    [Parameter(Mandatory=$true)][string]$LockedCommitLong
+  )
+
+  if(-not (Test-Path -LiteralPath $LockRoot -PathType Container)){
+    throw "PIE_GREEN_TERMINAL_STATE_VERIFY_LOCK_ROOT_MISSING"
+  }
+
+  $Files = Get-ChildItem -LiteralPath $LockRoot -File -Filter "pie_green_lock_receipt_*.json" |
+    Sort-Object Name -Descending
+
+  foreach($File in $Files){
+    $Json = Get-Content -LiteralPath $File.FullName -Raw | ConvertFrom-Json
+    if([string]$Json.schema -ne "pie.green.lock.receipt.v1"){ continue }
+    if([string]$Json.lock_tag -ne $LockedTag){ continue }
+    if([string]$Json.lock_commit -ne $LockedCommitLong){ continue }
+
+    return [ordered]@{
+      path = $File.FullName
+      json = $Json
+    }
+  }
+
+  throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_MATCHING_LOCK_RECEIPT_MISSING: " + $LockedTag)
+}
+
+function Find-MatchingSnapshot {
+  param(
+    [Parameter(Mandatory=$true)][string]$SnapshotRoot,
+    [Parameter(Mandatory=$true)][string]$LockedCommitShort
+  )
+
+  if(-not (Test-Path -LiteralPath $SnapshotRoot -PathType Container)){
+    throw "PIE_GREEN_TERMINAL_STATE_VERIFY_SNAPSHOT_ROOT_MISSING"
+  }
+
+  $Files = Get-ChildItem -LiteralPath $SnapshotRoot -File -Filter "pie_green_final_snapshot_*.json" |
+    Sort-Object Name -Descending
+
+  foreach($File in $Files){
+    $Json = Get-Content -LiteralPath $File.FullName -Raw | ConvertFrom-Json
+    if([string]$Json.schema -ne "pie.green.final.snapshot.v2"){ continue }
+    if([string]$Json.commit -ne $LockedCommitShort){ continue }
+    if(-not [bool]$Json.git_status_clean){ continue }
+
+    return [ordered]@{
+      path = $File.FullName
+      json = $Json
+    }
+  }
+
+  throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_MATCHING_SNAPSHOT_MISSING: " + $LockedCommitShort)
+}
+
 $TrackedStatus = @(git -C $RepoRoot status --short --untracked-files=no)
 if(@($TrackedStatus).Count -gt 0){
   throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_TRACKED_DIRTY: " + ($TrackedStatus -join " | "))
 }
 
 $FreezeRoot = Join-Path $RepoRoot "proofs\freeze"
-$LockPointer = Join-Path $RepoRoot "proofs\receipts\pie_green_lock\latest_pie_green_lock_receipt.json"
-$SnapshotPointer = Join-Path $RepoRoot "proofs\receipts\pie_green_final_snapshot\latest_pie_green_final_snapshot.json"
-$TerminalPointer = Join-Path $RepoRoot "proofs\receipts\pie_green_terminal\latest_pie_green_terminal_receipt.json"
+$LockRoot = Join-Path $RepoRoot "proofs\receipts\pie_green_lock"
+$SnapshotRoot = Join-Path $RepoRoot "proofs\receipts\pie_green_final_snapshot"
+$TerminalRoot = Join-Path $RepoRoot "proofs\receipts\pie_green_terminal"
+
+$TerminalPointer = Join-Path $TerminalRoot "latest_pie_green_terminal_receipt.json"
+$TerminalJson = Get-JsonOrThrow -Path $TerminalPointer -Code "PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_POINTER_MISSING"
+
+if([string]$TerminalJson.schema -ne "pie.green.terminal.receipt.v1"){
+  throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_SCHEMA_BAD: " + [string]$TerminalJson.schema)
+}
+
+$LockedTag = [string]$TerminalJson.locked_tag
+$LockedCommitLong = [string]$TerminalJson.locked_commit_long
+$LockedCommitShort = ((git -C $RepoRoot rev-parse --short $LockedCommitLong) -join "").Trim()
+
+if([string]::IsNullOrWhiteSpace($LockedTag)){
+  throw "PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_LOCK_TAG_MISSING"
+}
+if([string]::IsNullOrWhiteSpace($LockedCommitLong)){
+  throw "PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_LOCK_COMMIT_MISSING"
+}
+if([string]::IsNullOrWhiteSpace($LockedCommitShort)){
+  throw "PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_LOCK_COMMIT_SHORT_MISSING"
+}
 
 $LatestFull = Get-LatestCompletedFreezeDir -FreezeRoot $FreezeRoot -Prefix "pie_tier0_green_"
 $LatestGov = Get-LatestCompletedFreezeDir -FreezeRoot $FreezeRoot -Prefix "pie_governance_green_"
@@ -84,9 +162,6 @@ $GovSummaryPath = Join-Path $LatestGov.FullName "FREEZE_SUMMARY.json"
 
 $FullSummary = Get-JsonOrThrow -Path $FullSummaryPath -Code "PIE_GREEN_TERMINAL_STATE_VERIFY_FULL_SUMMARY_MISSING"
 $GovSummary = Get-JsonOrThrow -Path $GovSummaryPath -Code "PIE_GREEN_TERMINAL_STATE_VERIFY_GOV_SUMMARY_MISSING"
-$LockJson = Get-JsonOrThrow -Path $LockPointer -Code "PIE_GREEN_TERMINAL_STATE_VERIFY_LOCK_POINTER_MISSING"
-$SnapshotJson = Get-JsonOrThrow -Path $SnapshotPointer -Code "PIE_GREEN_TERMINAL_STATE_VERIFY_SNAPSHOT_POINTER_MISSING"
-$TerminalJson = Get-JsonOrThrow -Path $TerminalPointer -Code "PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_POINTER_MISSING"
 
 if([string]$FullSummary.schema -ne "pie.tier0.full_green.summary.v1"){
   throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_FULL_SCHEMA_BAD: " + [string]$FullSummary.schema)
@@ -105,28 +180,17 @@ if([string]$GovSummary.mode -ne "trusted_baseline_lifecycle"){
   throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_GOV_MODE_BAD: " + [string]$GovSummary.mode)
 }
 
-if([string]$LockJson.schema -ne "pie.green.lock.receipt.v1"){
-  throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_LOCK_SCHEMA_BAD: " + [string]$LockJson.schema)
-}
-if([string]$SnapshotJson.schema -ne "pie.green.final.snapshot.v2"){
-  throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_SNAPSHOT_SCHEMA_BAD: " + [string]$SnapshotJson.schema)
-}
-if([string]$TerminalJson.schema -ne "pie.green.terminal.receipt.v1"){
-  throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_SCHEMA_BAD: " + [string]$TerminalJson.schema)
-}
+$ResolvedLock = Find-MatchingLockReceipt -LockRoot $LockRoot -LockedTag $LockedTag -LockedCommitLong $LockedCommitLong
+$ResolvedSnapshot = Find-MatchingSnapshot -SnapshotRoot $SnapshotRoot -LockedCommitShort $LockedCommitShort
 
-$LockedTag = [string]$LockJson.lock_tag
-$LockedCommitLong = [string]$LockJson.lock_commit
-$LockedCommitShort = ((git -C $RepoRoot rev-parse --short $LockedCommitLong) -join "").Trim()
+$LockJson = $ResolvedLock.json
+$SnapshotJson = $ResolvedSnapshot.json
 
-if([string]::IsNullOrWhiteSpace($LockedTag)){
-  throw "PIE_GREEN_TERMINAL_STATE_VERIFY_LOCK_TAG_MISSING"
+if([string]$LockJson.lock_tag -ne $LockedTag){
+  throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_LOCK_TAG_BAD: " + [string]$LockJson.lock_tag + " != " + $LockedTag)
 }
-if([string]::IsNullOrWhiteSpace($LockedCommitLong)){
-  throw "PIE_GREEN_TERMINAL_STATE_VERIFY_LOCK_COMMIT_MISSING"
-}
-if([string]::IsNullOrWhiteSpace($LockedCommitShort)){
-  throw "PIE_GREEN_TERMINAL_STATE_VERIFY_LOCK_COMMIT_SHORT_MISSING"
+if([string]$LockJson.lock_commit -ne $LockedCommitLong){
+  throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_LOCK_COMMIT_BAD: " + [string]$LockJson.lock_commit + " != " + $LockedCommitLong)
 }
 
 if([string]$SnapshotJson.commit -ne $LockedCommitShort){
@@ -148,18 +212,26 @@ if([int]$SnapshotJson.latest_green_cli_contract_selftest.audit_finding_count -ne
   throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_SNAPSHOT_CLI_CONTRACT_FINDINGS_BAD: " + [string]$SnapshotJson.latest_green_cli_contract_selftest.audit_finding_count)
 }
 
-if([string]$TerminalJson.locked_tag -ne $LockedTag){
-  throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_LOCK_TAG_BAD: " + [string]$TerminalJson.locked_tag + " != " + $LockedTag)
-}
-if([string]$TerminalJson.locked_commit_long -ne $LockedCommitLong){
-  throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_LOCK_COMMIT_BAD: " + [string]$TerminalJson.locked_commit_long + " != " + $LockedCommitLong)
-}
 if([string]::IsNullOrWhiteSpace([string]$TerminalJson.resolved_final_snapshot_path)){
   throw "PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_RESOLVED_SNAPSHOT_MISSING"
 }
 if(-not (Test-Path -LiteralPath ([string]$TerminalJson.resolved_final_snapshot_path) -PathType Leaf)){
   throw "PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_RESOLVED_SNAPSHOT_BAD"
 }
+
+$ResolvedTerminalSnapshotCommit = ""
+try {
+  $ResolvedTerminalSnapshotJson = Get-Content -LiteralPath ([string]$TerminalJson.resolved_final_snapshot_path) -Raw | ConvertFrom-Json
+  $ResolvedTerminalSnapshotCommit = [string]$ResolvedTerminalSnapshotJson.commit
+}
+catch {
+  throw "PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_RESOLVED_SNAPSHOT_PARSE_FAIL"
+}
+
+if($ResolvedTerminalSnapshotCommit -ne $LockedCommitShort){
+  throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_RESOLVED_SNAPSHOT_COMMIT_BAD: " + $ResolvedTerminalSnapshotCommit + " != " + $LockedCommitShort)
+}
+
 if([int]$TerminalJson.child_count -lt 2){
   throw ("PIE_GREEN_TERMINAL_STATE_VERIFY_TERMINAL_CHILD_COUNT_BAD: " + [string]$TerminalJson.child_count)
 }
@@ -205,11 +277,11 @@ $Summary = [ordered]@{
   baseline_lock_tag = $LockedTag
   baseline_lock_commit = $LockedCommitShort
   baseline_lock_commit_long = $LockedCommitLong
+  resolved_lock_receipt_path = [string]$ResolvedLock.path
+  resolved_snapshot_path = [string]$ResolvedSnapshot.path
+  latest_terminal_receipt_pointer = $TerminalPointer
   latest_full_green = $LatestFull.FullName
   latest_governance_green = $LatestGov.FullName
-  latest_lock_receipt_pointer = $LockPointer
-  latest_snapshot_pointer = $SnapshotPointer
-  latest_terminal_receipt_pointer = $TerminalPointer
 }
 
 $SummaryPath = Join-Path $CaseRoot "pie_green_terminal_state_verify_summary.json"
