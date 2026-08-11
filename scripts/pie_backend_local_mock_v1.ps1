@@ -61,6 +61,14 @@ $sessionId    = Get-JsonStringValue $requestJson "session_id"
 $messageIndex = Get-JsonIntValue $requestJson "message_index"
 $prompt       = Get-JsonStringValue $requestJson "prompt"
 
+if(-not [string]::IsNullOrWhiteSpace($env:PIE_MOCK_RESPONSE_DELAY_SECONDS)){
+  $DelaySeconds = 0
+  if(-not [int]::TryParse($env:PIE_MOCK_RESPONSE_DELAY_SECONDS,[ref]$DelaySeconds) -or $DelaySeconds -lt 0 -or $DelaySeconds -gt 600){
+    Die "PIE_MOCK_RESPONSE_DELAY_SECONDS_INVALID"
+  }
+  if($DelaySeconds -gt 0){ Start-Sleep -Seconds $DelaySeconds }
+}
+
 $trim = $prompt.Trim()
 if([string]::IsNullOrWhiteSpace($trim)){
   Die "EMPTY_PROMPT_REJECTED"

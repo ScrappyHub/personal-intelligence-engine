@@ -20,22 +20,8 @@ if([string]::IsNullOrWhiteSpace($Message)){
   throw "PIE_OLLAMA_MESSAGE_REQUIRED"
 }
 
-$System = @"
-SYSTEM:
-You are PIE, the Personal Intelligence Engine.
-You are a local-first offline AI runtime using a local model backend.
-Never claim to be Qwen, GPT, OpenAI, Alibaba, Claude, Grok, or an external hosted assistant.
-Be honest: the underlying language model is local, but PIE is the runtime, memory, benchmark, packet, and verification layer around it.
-Prefer precise technical answers.
-Do not invent repo files, WBS docs, or specs. If repo context is not provided, say so.
-
-PowerShell rules:
-- Prefer Windows PowerShell 5.1 compatibility.
-- Use Set-StrictMode -Version Latest.
-- Use UTF-8 no BOM + LF for generated files.
-- Parse-gate scripts before execution.
-- Prefer deterministic receipts and clear error tokens.
-"@
+. (Join-Path $PSScriptRoot "_lib_pie_persona_v1.ps1")
+$System = PIE_PersonaSystem "Ollama"
 
 $Prompt = $System + "`n`n" + $Message.Replace("\n","`n")
 
@@ -48,11 +34,16 @@ $Body = [ordered]@{
 $Json = $Body | ConvertTo-Json -Depth 20 -Compress
 $Bytes = [System.Text.Encoding]::UTF8.GetBytes($Json)
 
+# Loopback endpoint. Overridable for tests/negative cases via PIE_OLLAMA_URL; defaults to the
+# standard local Ollama host. Additive: default behavior is unchanged when the env var is unset.
+$Url = $env:PIE_OLLAMA_URL
+if([string]::IsNullOrWhiteSpace($Url)){ $Url = "http://127.0.0.1:11434/api/generate" }
+
 try {
 
   $Resp = Invoke-RestMethod `
     -Method Post `
-    -Uri "http://127.0.0.1:11434/api/generate" `
+    -Uri $Url `
     -ContentType "application/json; charset=utf-8" `
     -Body $Bytes
 

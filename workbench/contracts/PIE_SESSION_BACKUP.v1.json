@@ -1,0 +1,40 @@
+{
+  "schema": "pie.session.backup.contract.v1",
+  "archive_schema": "pie.session.backup.v1",
+  "receipt_schema": "pie.session.backup.receipt.v1",
+  "format": "piebak2_encrypted_envelope",
+  "encryption": {
+    "cipher": "aes-256-gcm",
+    "nonce_bytes": 12,
+    "tag_bytes": 16,
+    "kdf": "scrypt",
+    "salt_bytes": 32,
+    "N": 131072,
+    "r": 8,
+    "p": 1,
+    "authenticated_header": true,
+    "encrypted_payload": "complete_zip_including_manifest_and_filenames"
+  },
+  "manifest_entry": "PIE_SESSION_BACKUP.json",
+  "payload_prefix": "session/",
+  "limits": {
+    "max_files": 10000,
+    "max_uncompressed_bytes": 2147483648,
+    "max_single_file_bytes": 1073741824
+  },
+  "guarantees": [
+    "verified_sessions_only",
+    "exclusive_export_lock",
+    "sha256_every_file",
+    "path_traversal_rejected",
+    "duplicate_entries_rejected",
+    "existing_session_never_overwritten",
+    "failed_restore_removed_before_receipt",
+    "passphrases_never_in_arguments_receipts_or_logs"
+  ],
+  "non_goals": [
+    "repository_path_migration",
+    "model_identity_migration",
+    "cloud_sync"
+  ]
+}

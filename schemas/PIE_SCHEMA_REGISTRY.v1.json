@@ -1,0 +1,32 @@
+{
+  "schema": "pie.schema.registry.v1",
+  "purpose": "Canonical enumeration of PIE persistent schemas and their current versions. Foundation for release-blocker B1 (versioned migrations). A reader MUST fail closed on an unknown schema or a version newer than current (no silent downgrade or drift; PIE LAW 4/SPEC invariant 7).",
+  "updated_utc": "2026-08-11T00:00:00Z",
+  "schemas": [
+    { "id": "run_record.v1",              "current": 1, "persistence": "append_only_ledger", "location": "runs/run_ledger.ndjson", "migratable": true },
+    { "id": "pie.memory.record.v1",       "current": 1, "persistence": "mutable_state",       "location": "memory/**/*.json", "migratable": true },
+    { "id": "pie.memory.registry.v1",     "current": 1, "persistence": "mutable_state",       "location": "memory/PIE_MEMORY_REGISTRY.v1.json", "migratable": true },
+    { "id": "pie.memory.policy.v1",       "current": 1, "persistence": "config",              "location": "memory/policy.json", "migratable": true },
+    { "id": "pie.repo.memory.v1",         "current": 1, "persistence": "mutable_state",       "location": "memory/projects/**", "migratable": true },
+    { "id": "model_manifest.v1",          "current": 1, "persistence": "sealed_state",         "location": "registry/models/*/model_manifest.v1.json", "migratable": true },
+    { "id": "pie.model.source.v1",        "current": 1, "persistence": "sealed_state",         "location": "registry/models/*/source.json", "migratable": true },
+    { "id": "pie.model.registry.v1",      "current": 1, "persistence": "config",              "location": "models/PIE_MODEL_REGISTRY.v1.json", "migratable": true },
+    { "id": "pie.saved.conversation.v1",  "current": 1, "persistence": "mutable_state",       "location": "saved_conversations/**", "migratable": true },
+    { "id": "pie.packet_manifest.v1",     "current": 1, "persistence": "sealed_evidence",      "location": "proofs/**/packet/manifest.json;test_vectors/**/packet/manifest.json", "migratable": false, "note": "content-addressed; a version bump is a new packet law, not an in-place migration" },
+    { "id": "pie.runtime.seal.receipt.v1","current": 1, "persistence": "receipt",             "location": "runs/runtime/**", "migratable": false },
+    { "id": "pie.vision.correction.v1",   "current": 1, "persistence": "mutable_state",       "location": "runs/**", "migratable": true },
+    { "id": "pie.policy.decision.v1",     "current": 1, "persistence": "receipt",             "location": "runs/**", "migratable": false },
+    { "id": "pie.reason.trace.schema.v1", "current": 1, "persistence": "receipt",             "location": "runs/**", "migratable": false },
+    { "id": "pie.attachment.v1",          "current": 1, "persistence": "mutable_state",       "location": "runs/**", "migratable": true },
+    { "id": "pie.repo.profile.v1",        "current": 1, "persistence": "config",              "location": ".pie/profile.json;profiles/**", "migratable": true },
+    { "id": "pie.exec.policy.v2",         "current": 2, "persistence": "config",              "location": "policies/PIE_EXEC_POLICY.v1.json", "migratable": true, "note": "already at v2; guards against a v3 downgrade" },
+    { "id": "commitment.v1",              "current": 1, "persistence": "mutable_state",       "location": "memory/**", "migratable": true }
+  ],
+  "contract_schemas_excluded": [
+    "pie.workbench.http.contract.v1", "pie.workbench.contracts.v1", "pie.session.backup.contract.v1",
+    "pie.hosted.gateway.contract.v1", "pie.haai.adapter.contract.v1", "pie.engine.adapter.contract.v1",
+    "pie.adapter.contract.v1", "pie.capability.registry.v1", "pie.capability.graph.v1",
+    "pie.policy.rules.v1", "pie.policy.lock.v1", "pie.intent.profiles.v1",
+    "note: these are definition/contract files versioned by their own filename, not migratable user state"
+  ]
+}

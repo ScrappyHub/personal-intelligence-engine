@@ -52,6 +52,14 @@ $B = @(
 $ObjB = $B | ConvertFrom-Json
 if($ObjB.decision -ne "DENY"){ throw "BOUNDARY_EXPECT_OUTSIDE_REPO_DENY" }
 
+$Compound = @(& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $Eval -RepoRoot $RepoRoot -Command "git status; Write-Output unsafe_tail" -WorkingDirectory $RepoRoot -SessionProjectRepo $RepoRoot) -join "`n"
+$ObjCompound = $Compound | ConvertFrom-Json
+if($ObjCompound.decision -eq "ALLOW" -or $ObjCompound.auto_confirm_allowed -eq $true){ throw "BOUNDARY_COMPOUND_COMMAND_TRUST_ESCALATION" }
+
+$Destructive = @(& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $Eval -RepoRoot $RepoRoot -Command "git reset --hard" -WorkingDirectory $RepoRoot -SessionProjectRepo $RepoRoot) -join "`n"
+$ObjDestructive = $Destructive | ConvertFrom-Json
+if($ObjDestructive.decision -ne "DENY"){ throw "BOUNDARY_DESTRUCTIVE_COMMAND_NOT_DENIED" }
+
 & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
   -File $Exec `
   -RepoRoot $RepoRoot `

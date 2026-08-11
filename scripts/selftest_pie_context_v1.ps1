@@ -8,6 +8,7 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 $SessionId = "pie_context_selftest"
 $RunRoot = Join-Path $RepoRoot ("runs\" + $SessionId)
+$FixtureMemory = Join-Path $RunRoot "fixture_memory"
 $Enc = New-Object System.Text.UTF8Encoding($false)
 
 function Write-Utf8NoBomLf {
@@ -27,6 +28,7 @@ Write-Utf8NoBomLf -Path (Join-Path $RunRoot "goal.txt") -Text "selftest context 
 Write-Utf8NoBomLf -Path (Join-Path $RunRoot "language.txt") -Text "PowerShell"
 Write-Utf8NoBomLf -Path (Join-Path $RunRoot "language_version.txt") -Text "5.1"
 Write-Utf8NoBomLf -Path (Join-Path $RunRoot "project_repo.txt") -Text "C:\dev\nfl"
+Write-Utf8NoBomLf -Path (Join-Path $FixtureMemory "active\memory.ndjson") -Text '{"schema":"pie.memory.record.v1","memory_id":"mem_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","lane":"active","project":"","project_repo":"","text":"Context injection memory marker.","created_utc":"2026-01-01T00:00:00Z"}'
 
 & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
   -File (Join-Path $RepoRoot "scripts\pie_repo_link_v1.ps1") `
@@ -40,7 +42,8 @@ $ContextOut = @(
     -File (Join-Path $RepoRoot "scripts\pie_context_build_v1.ps1") `
     -RepoRoot $RepoRoot `
     -SessionId $SessionId `
-    -UserMessage "what repos are in context?"
+    -UserMessage "what repos are in context?" `
+    -MemoryRoot $FixtureMemory
 ) -join "`n"
 
 if($LASTEXITCODE -ne 0){
@@ -71,6 +74,10 @@ if($Prompt -notmatch [regex]::Escape("C:\dev\csl")){
 
 if($Prompt -notmatch "IMPORTANT PATH RULE"){
   throw "PIE_CONTEXT_SELFTEST_PATH_RULE_MISSING"
+}
+
+if($Prompt -notmatch "Context injection memory marker"){
+  throw "PIE_CONTEXT_SELFTEST_MEMORY_NOT_INJECTED"
 }
 
 Write-Host "PIE_CONTEXT_SELFTEST_OK" -ForegroundColor Green

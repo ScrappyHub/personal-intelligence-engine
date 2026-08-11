@@ -4,25 +4,44 @@ param(
 
   [string]$RepoRoot = ".",
   [string]$SessionId = "pie_chat",
-  [string]$Model = "qwen2.5-coder:7b",
+  [string]$Model = "",
   [string]$Backend = "ollama",
   [string]$Profile = "core",
   [string]$Mode = "",
   [string]$Path = "",
   [string]$Hash = "",
+  [string]$MemoryId = "",
+  [string]$Capability = "",
+  [string]$Chain = "repo.health.basic",
+  [string]$WorkingDirectory = "",
   [string]$Text = "",
-  [string]$Lane = "active",
+  [string]$Lane = "",
   [string]$Project = "",
   [string]$ProjectRepo = "",
   [string]$TargetRepo = "",
+  [string]$Provider = "all",
+  [string]$HaaiRepo = "C:\dev\haai",
+  [string]$Role = "related",
   [string]$Prompt = "",
   [string]$Goal = "",
   [string]$Language = "",
+  [string]$Version = "",
+  [string]$OutputDirectory = "",
   [switch]$NewSettings,
   [switch]$PullMissing,
+  [switch]$SetDefault,
+  [switch]$Yes,
   [switch]$LastResults,
   [switch]$Scorecard,
-  [int]$Iterations = 2
+  [int]$Iterations = 2,
+  [int]$Limit = 25,
+  [int]$TimeoutSeconds = 180,
+  [int]$Retries = 1,
+  [int]$ProgressIntervalSeconds = 5,
+  [int]$Port = 4317,
+  [int]$TurnIndex = 0,
+  [switch]$AllowMock,
+  [switch]$PassphraseStdin
 )
 
 Set-StrictMode -Version Latest
@@ -268,6 +287,7 @@ if($ModeArg -eq "governance"){
 }
 
 $Scripts = Join-Path $RepoRoot "scripts"
+. (Join-Path $Scripts "_lib_pie_agent_session_v1.ps1")
 
 function Invoke-PieScript {
   param(
@@ -307,6 +327,20 @@ function Invoke-PieInteractiveScript {
   }
 }
 
+function Resolve-PieModel {
+  if(-not [string]::IsNullOrWhiteSpace($Model)){ return $Model }
+
+  $SelectedPath = Join-Path $RepoRoot "runs\runtime\config.json"
+  if(Test-Path -LiteralPath $SelectedPath -PathType Leaf){
+    try {
+      $Selected = [string]((Get-Content -LiteralPath $SelectedPath -Raw | ConvertFrom-Json).model)
+      if(-not [string]::IsNullOrWhiteSpace($Selected)){ return $Selected }
+    } catch { throw ("PIE_RUNTIME_CONFIG_INVALID: " + $SelectedPath + " :: " + $_.Exception.Message) }
+  }
+
+  return "qwen2.5-coder:7b"
+}
+
 function Show-Help {
   Write-Host ""
   Write-Host "PIE - Personal Intelligence Engine" -ForegroundColor Cyan
@@ -317,9 +351,20 @@ function Show-Help {
   Write-Host ""
   Write-Host "Commands:"
   Write-Host "  help            Show help"
+  Write-Host "  version         Show the PIE version"
   Write-Host "  setup           Setup local model/profile requirements"
-  Write-Host "  models          List local models"
-  Write-Host "  pull            Download a model"
+  Write-Host "  agent           Run a governed local coding-agent session"
+  Write-Host "  runtime         Install, start, or inspect the local model host"
+  Write-Host "  integrations    Inspect or verify Supabase, Figma, Vercel, and Cloudflare"
+  Write-Host "  doctor          Audit CLI, memory, conversations, models, and app surfaces"
+  Write-Host "  workbench       Open the local browser workbench"
+  Write-Host "  haai            Export a verified conversation turn to a HAAI evidence packet"
+  Write-Host "  session         Export, verify, or restore a complete verified session backup"
+  Write-Host "  package         Build a verified installable PIE package"
+  Write-Host "  models          List, browse, and select local models"
+  Write-Host "  pull            Download a model onto this machine"
+  Write-Host "  seal-ollama     Seal a pulled Ollama model into the registry (-Model <tag>)"
+  Write-Host "  run             Run one governed generation (-Prompt <text> [-Backend stub|ollama|llamacpp|onnx])"
   Write-Host "  chat            Start local chat"
   Write-Host "  ask             Ask PIE once using session memory/attachments"
   Write-Host "  doc             Send a document to PIE"
@@ -331,6 +376,7 @@ function Show-Help {
   Write-Host "  memory          Memory commands"
   Write-Host "  policy          Evaluate local PIE policy decision"
   Write-Host "  integrate       Integrate PIE with a target repo"
+  Write-Host "  scan            Scan a target repo (-TargetRepo <path>)"
   Write-Host "  scan-last       Show latest repo scan artifact"
   Write-Host "  save            Save conversation by hash"
   Write-Host "  open            Reopen saved conversation by hash"
@@ -341,12 +387,49 @@ function Show-Help {
   Write-Host "  score           Score latest benchmark run"
   Write-Host "  show            Show latest benchmark/model results"
   Write-Host "  verify-runtime  Verify PIE runtime command surface"
+  Write-Host "  verify-engines  Verify engine adapters (parse-gate + persona + Tier-0 + trios)"
   Write-Host ""
   Write-Host "Examples:"
-  Write-Host "  pie chat"
+  Write-Host "  pie runtime install"
+  Write-Host "  pie runtime start"
+  Write-Host "  pie workbench"
+  Write-Host "  pie package -Version 0.1.0"
+  Write-Host "  pie models catalog"
+  Write-Host "  pie pull -Model qwen2.5-coder:7b -SetDefault"
+  Write-Host "  pie models use -Model qwen2.5-coder:7b"
+  Write-Host "  pie agent start -SessionId my_work -TargetRepo . -Goal `"Fix tests`""
+  Write-Host "  pie agent inspect -SessionId my_work"
+  Write-Host "  pie agent exec -SessionId my_work -Text `"git status`""
+  Write-Host "  pie session export -SessionId my_work"
+  Write-Host "  pie session verify -Path .\backups\pie-session-my_work-<id>.piebak"
+  Write-Host "  pie session restore -Path .\backups\pie-session-my_work-<id>.piebak"
+  Write-Host "  pie chat [-SessionId <id>] [-TargetRepo <path>] [-Goal <goal>]"
   Write-Host "  pie chat -NewSettings"
   Write-Host "  pie integrate -TargetRepo C:\dev\nfl -Project nfl -Language `"PowerShell 5.1`""
   Write-Host "  pie ask -SessionId my_chat -Text `"What is my current chat goal?`""
+  Write-Host "  pie run -Model pie-onnx-fixture -Prompt `"Say ready`" -Backend stub"
+  Write-Host "  pie seal-ollama -Model qwen2.5-coder:1.5b"
+  Write-Host "  pie run -Model qwen2.5-coder:1.5b -Prompt `"Say ready`" -Backend ollama"
+  Write-Host "  pie verify-engines"
+  Write-Host "  pie version"
+  Write-Host ""
+}
+
+function Show-AgentHelp {
+  Write-Host ""
+  Write-Host "PIE Agent" -ForegroundColor Cyan
+  Write-Host ""
+  Write-Host "  pie agent start -SessionId <id> [-TargetRepo .] [-Goal <goal>]"
+  Write-Host "  pie agent sessions"
+  Write-Host "  pie agent status -SessionId <id>"
+  Write-Host "  pie agent history -SessionId <id>"
+  Write-Host "  pie agent ask -SessionId <id> -Text <question> [-TimeoutSeconds 180] [-Retries 1]"
+  Write-Host "  pie agent plan -SessionId <id> -Goal <goal>"
+  Write-Host "  pie agent inspect -SessionId <id> [-Chain repo.health.basic]"
+  Write-Host "  pie agent capabilities"
+  Write-Host "  pie agent capability -SessionId <id> -Capability repo.status"
+  Write-Host "  pie agent exec -SessionId <id> -Text <command> [-Yes]"
+  Write-Host "  pie agent stop -SessionId <id>"
   Write-Host ""
 }
 
@@ -362,6 +445,9 @@ function Show-MemoryHelp {
   Write-Host "  pie memory policy -Mode off"
   Write-Host "  pie memory accept -Text `"Remember this`" -Lane active"
   Write-Host "  pie memory accept -Text `"Project rule`" -Lane project -Project pie"
+  Write-Host "  pie memory list -Lane coding"
+  Write-Host "  pie memory search -Text `"PowerShell preference`""
+  Write-Host "  pie memory forget -MemoryId mem_<sha256>"
   Write-Host ""
 }
 
@@ -370,6 +456,157 @@ switch($Command.ToLowerInvariant()){
   "help" {
     Show-Help
     return
+  }
+
+  "doctor" {
+    Invoke-PieScript -Script "pie_doctor_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-HaaiRepo",$HaaiRepo)
+    return
+  }
+
+  "runtime" {
+    $Action = $Subcommand
+    if([string]::IsNullOrWhiteSpace($Action)){ $Action = "status" }
+    Invoke-PieInteractiveScript -Script "pie_runtime_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-Action",$Action)
+    return
+  }
+
+  "integrations" {
+    $Action = $Subcommand
+    if([string]::IsNullOrWhiteSpace($Action)){ $Action = "status" }
+    $IntegrationScript = Join-Path $Scripts "pie_integrations_v1.ps1"
+    if(-not (Test-Path -LiteralPath $IntegrationScript -PathType Leaf)){ throw ("PIE_CLI_SCRIPT_MISSING: " + $IntegrationScript) }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $IntegrationScript `
+      -RepoRoot $RepoRoot -Action $Action -Provider $Provider -TimeoutSeconds $TimeoutSeconds
+    exit $LASTEXITCODE
+  }
+
+  "workbench" {
+    $Action = $Subcommand
+    if([string]::IsNullOrWhiteSpace($Action)){ $Action = "start" }
+    $A = @("-RepoRoot",$RepoRoot,"-Action",$Action,"-Port",[string]$Port)
+    if($AllowMock){ $A += "-AllowMock" }
+    Invoke-PieInteractiveScript -Script "pie_workbench_v1.ps1" -Args $A
+    return
+  }
+
+  "package" {
+    $A = @("-RepoRoot",$RepoRoot)
+    if(-not [string]::IsNullOrWhiteSpace($Version)){ $A += @("-Version",$Version) }
+    if(-not [string]::IsNullOrWhiteSpace($OutputDirectory)){ $A += @("-OutputDirectory",$OutputDirectory) }
+    Invoke-PieScript -Script "pie_package_v1.ps1" -Args $A
+    return
+  }
+
+  "haai" {
+    $Action = $Subcommand
+    if([string]::IsNullOrWhiteSpace($Action)){ $Action = "capture" }
+    if($Action -ne "capture"){ throw ("PIE_HAAI_UNKNOWN_COMMAND: " + $Action) }
+    Invoke-PieScript -Script "pie_haai_capture_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-TurnIndex",[string]$TurnIndex,"-HaaiRepo",$HaaiRepo)
+    return
+  }
+
+  "session" {
+    $Action = $Subcommand.ToLowerInvariant()
+    if($Action -notin @("export","verify","restore")){ throw "PIE_SESSION_COMMAND_REQUIRED: export, verify, or restore" }
+    $A = @("-RepoRoot",$RepoRoot,"-Action",$Action)
+    if($Action -eq "export"){
+      if([string]::IsNullOrWhiteSpace($SessionId)){ throw "PIE_SESSION_BACKUP_SESSION_ID_REQUIRED" }
+      $A += @("-SessionId",$SessionId)
+      if(-not [string]::IsNullOrWhiteSpace($OutputDirectory)){ $A += @("-OutputDirectory",$OutputDirectory) }
+    }
+    else {
+      if([string]::IsNullOrWhiteSpace($Path)){ throw "PIE_SESSION_BACKUP_ARCHIVE_REQUIRED: use -Path <backup.zip>" }
+      $A += @("-ArchivePath",$Path)
+    }
+    if($PassphraseStdin){ $A += "-PassphraseStdin" }
+    Invoke-PieInteractiveScript -Script "pie_session_backup_v1.ps1" -Args $A
+    return
+  }
+
+  "agent" {
+    switch($Subcommand.ToLowerInvariant()){
+      "" { Show-AgentHelp; return }
+      "help" { Show-AgentHelp; return }
+      "start" {
+        $Model = Resolve-PieModel
+        if([string]::IsNullOrWhiteSpace($TargetRepo)){ $TargetRepo = (Get-Location).Path }
+        if(-not (Test-Path -LiteralPath $TargetRepo -PathType Container)){
+          throw ("PIE_AGENT_TARGET_REPO_NOT_FOUND: " + $TargetRepo + ". Use -TargetRepo . for the current repository or provide an existing directory.")
+        }
+        $A = @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Backend",$Backend,"-Model",$Model,"-ProjectRepo",$TargetRepo)
+        if(-not [string]::IsNullOrWhiteSpace($Goal)){ $A += @("-Goal",$Goal) }
+        Invoke-PieScript -Script "pie_agent_start_v1.ps1" -Args $A
+        return
+      }
+      "status" {
+        [void](PIE_GetAgentSession -RepoRoot $RepoRoot -SessionId $SessionId)
+        Invoke-PieScript -Script "pie_agent_status_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId)
+        return
+      }
+      "history" {
+        [void](PIE_GetAgentSession -RepoRoot $RepoRoot -SessionId $SessionId)
+        Invoke-PieScript -Script "pie_agent_history_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId)
+        return
+      }
+      "sessions" {
+        Invoke-PieScript -Script "pie_agent_list_v1.ps1" -Args @("-RepoRoot",$RepoRoot)
+        return
+      }
+      "ask" {
+        if([string]::IsNullOrWhiteSpace($Text)){ throw "PIE_AGENT_ASK_TEXT_REQUIRED" }
+        if($TimeoutSeconds -lt 1){ throw "PIE_AGENT_TIMEOUT_SECONDS_INVALID" }
+        if($Retries -lt 0 -or $Retries -gt 2){ throw "PIE_AGENT_RETRIES_INVALID: expected 0..2" }
+        if($ProgressIntervalSeconds -lt 1){ throw "PIE_AGENT_PROGRESS_INTERVAL_INVALID" }
+        [void](PIE_GetAgentSession -RepoRoot $RepoRoot -SessionId $SessionId -RequireRunning -RequireIntegrity)
+        Invoke-PieScript -Script "pie_ask_v1.ps1" -Args @(
+          "-RepoRoot",$RepoRoot,
+          "-SessionId",$SessionId,
+          "-Message",$Text,
+          "-TimeoutSeconds",$TimeoutSeconds,
+          "-MaxAttempts",($Retries + 1),
+          "-ProgressIntervalSeconds",$ProgressIntervalSeconds
+        )
+        return
+      }
+      "plan" {
+        if([string]::IsNullOrWhiteSpace($Goal)){ throw "PIE_AGENT_PLAN_GOAL_REQUIRED" }
+        [void](PIE_GetAgentSession -RepoRoot $RepoRoot -SessionId $SessionId -RequireRunning -RequireIntegrity)
+        Invoke-PieScript -Script "pie_plan_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Goal",$Goal)
+        return
+      }
+      "inspect" {
+        [void](PIE_GetAgentSession -RepoRoot $RepoRoot -SessionId $SessionId -RequireRunning -RequireIntegrity)
+        Invoke-PieScript -Script "pie_orchestrate_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-ChainId",$Chain,"-AutoConfirmAllowed")
+        return
+      }
+      "capabilities" {
+        Invoke-PieScript -Script "pie_capability_list_v1.ps1" -Args @("-RepoRoot",$RepoRoot)
+        return
+      }
+      "capability" {
+        if([string]::IsNullOrWhiteSpace($Capability)){ throw "PIE_AGENT_CAPABILITY_REQUIRED" }
+        [void](PIE_GetAgentSession -RepoRoot $RepoRoot -SessionId $SessionId -RequireRunning -RequireIntegrity)
+        $A = @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-CapabilityId",$Capability,"-AutoConfirmAllowed")
+        if($Yes){ $A += "-Confirm" }
+        Invoke-PieScript -Script "pie_capability_v1.ps1" -Args $A
+        return
+      }
+      "exec" {
+        if([string]::IsNullOrWhiteSpace($Text)){ throw "PIE_AGENT_EXEC_COMMAND_REQUIRED" }
+        [void](PIE_GetAgentSession -RepoRoot $RepoRoot -SessionId $SessionId -RequireRunning -RequireIntegrity)
+        $A = @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Command",$Text,"-AutoConfirmAllowed")
+        if(-not [string]::IsNullOrWhiteSpace($WorkingDirectory)){ $A += @("-WorkingDirectory",$WorkingDirectory) }
+        if($Yes){ $A += "-Confirm" }
+        Invoke-PieScript -Script "pie_exec_with_snapshot_v1.ps1" -Args $A
+        return
+      }
+      "stop" {
+        [void](PIE_GetAgentSession -RepoRoot $RepoRoot -SessionId $SessionId)
+        Invoke-PieScript -Script "pie_agent_stop_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId)
+        return
+      }
+      default { throw ("PIE_AGENT_UNKNOWN_COMMAND: " + $Subcommand) }
+    }
   }
 
   "setup" {
@@ -383,7 +620,11 @@ switch($Command.ToLowerInvariant()){
   }
 
   "models" {
-    & ollama list
+    $Action = $Subcommand
+    if([string]::IsNullOrWhiteSpace($Action)){ $Action = "list" }
+    $A = @("-RepoRoot",$RepoRoot,"-Action",$Action)
+    if(-not [string]::IsNullOrWhiteSpace($Model)){ $A += @("-Model",$Model) }
+    Invoke-PieScript -Script "pie_models_v1.ps1" -Args $A
     return
   }
 
@@ -392,21 +633,24 @@ switch($Command.ToLowerInvariant()){
       throw "PIE_CLI_MODEL_REQUIRED"
     }
 
-    & ollama pull $Model
-
-    if($LASTEXITCODE -ne 0){
-      throw ("PIE_MODEL_PULL_FAIL: " + $Model)
-    }
+    $A = @("-RepoRoot",$RepoRoot,"-Action","pull","-Model",$Model)
+    if($SetDefault){ $A += "-SetDefault" }
+    Invoke-PieInteractiveScript -Script "pie_models_v1.ps1" -Args $A
 
     return
   }
 
   "chat" {
+    $Model = Resolve-PieModel
     $A = @(
       "-RepoRoot",$RepoRoot,
       "-SessionId",$SessionId,
-      "-Model",$Model
+      "-Model",$Model,
+      "-Backend",$Backend
     )
+
+    $ChatProjectRepo = $(if(-not [string]::IsNullOrWhiteSpace($TargetRepo)){ $TargetRepo } else { $ProjectRepo })
+    if(-not [string]::IsNullOrWhiteSpace($ChatProjectRepo)){ $A += @("-ProjectRepo",$ChatProjectRepo) }
 
     if(-not [string]::IsNullOrWhiteSpace($Goal)){
       $A += @("-Goal",$Goal)
@@ -437,7 +681,10 @@ switch($Command.ToLowerInvariant()){
       -Args @(
         "-RepoRoot",$RepoRoot,
         "-SessionId",$SessionId,
-        "-Message",$Text
+        "-Message",$Text,
+        "-TimeoutSeconds",$TimeoutSeconds,
+        "-MaxAttempts",($Retries + 1),
+        "-ProgressIntervalSeconds",$ProgressIntervalSeconds
       )
 
     return
@@ -496,6 +743,7 @@ switch($Command.ToLowerInvariant()){
   }
 
   "vision" {
+    $Model = Resolve-PieModel
     if([string]::IsNullOrWhiteSpace($Prompt)){
       $Prompt = "Describe the attached image clearly and concisely."
     }
@@ -584,10 +832,12 @@ switch($Command.ToLowerInvariant()){
           throw "PIE_MEMORY_TEXT_REQUIRED"
         }
 
+        $EffectiveLane = $Lane
+        if([string]::IsNullOrWhiteSpace($EffectiveLane)){ $EffectiveLane = "active" }
         $A = @(
           "-RepoRoot",$RepoRoot,
           "-Text",$Text,
-          "-Lane",$Lane
+          "-Lane",$EffectiveLane
         )
 
         if(-not [string]::IsNullOrWhiteSpace($Project)){
@@ -598,10 +848,37 @@ switch($Command.ToLowerInvariant()){
           $A += @("-ProjectRepo",$ProjectRepo)
         }
 
+        if($Yes){ $A += "-Yes" }
+
         Invoke-PieInteractiveScript `
           -Script "pie_memory_accept_v1.ps1" `
           -Args $A
 
+        return
+      }
+
+      "list" {
+        $EffectiveLane = $Lane
+        if([string]::IsNullOrWhiteSpace($EffectiveLane)){ $EffectiveLane = "all" }
+        $A = @("-RepoRoot",$RepoRoot,"-Lane",$EffectiveLane,"-Limit",([string]$Limit))
+        if(-not [string]::IsNullOrWhiteSpace($Project)){ $A += @("-Project",$Project) }
+        Invoke-PieScript -Script "pie_memory_query_v1.ps1" -Args $A
+        return
+      }
+
+      "search" {
+        if([string]::IsNullOrWhiteSpace($Text)){ throw "PIE_MEMORY_QUERY_REQUIRED" }
+        $EffectiveLane = $Lane
+        if([string]::IsNullOrWhiteSpace($EffectiveLane)){ $EffectiveLane = "all" }
+        $A = @("-RepoRoot",$RepoRoot,"-Query",$Text,"-Lane",$EffectiveLane,"-Limit",([string]$Limit))
+        if(-not [string]::IsNullOrWhiteSpace($Project)){ $A += @("-Project",$Project) }
+        Invoke-PieScript -Script "pie_memory_query_v1.ps1" -Args $A
+        return
+      }
+
+      "forget" {
+        if([string]::IsNullOrWhiteSpace($MemoryId)){ throw "PIE_MEMORY_ID_REQUIRED" }
+        Invoke-PieScript -Script "pie_memory_forget_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-MemoryId",$MemoryId)
         return
       }
 
@@ -783,8 +1060,10 @@ switch($Command.ToLowerInvariant()){
   }
 
   "stress-models" {
+    $Model = Resolve-PieModel
     $A = @(
       "-RepoRoot",$RepoRoot,
+      "-Model",$Model,
       "-Iterations",([string]$Iterations)
     )
 
@@ -836,6 +1115,8 @@ switch($Command.ToLowerInvariant()){
     throw "PIE_SCAN_TARGET_REPO_REQUIRED"
   }
 
+  $Model = Resolve-PieModel
+
   Invoke-PieScript `
     -Script "pie_repo_scan_v1.ps1" `
     -Args @(
@@ -858,22 +1139,43 @@ switch($Command.ToLowerInvariant()){
     return
   }
 
+  "version" {
+    $v = "0.1.0-dev"
+    $verFile = Join-Path $RepoRoot "VERSION"
+    if(Test-Path -LiteralPath $verFile -PathType Leaf){
+      $fromFile = ((Get-Content -LiteralPath $verFile -Raw)).Trim()
+      if(-not [string]::IsNullOrWhiteSpace($fromFile)){ $v = $fromFile }
+    }
+    Write-Host ("PIE " + $v) -ForegroundColor Cyan
+    return
+  }
+
+  "run" {
+    # Direct governed run through an engine backend (stub|ollama|llamacpp|onnx). Non-stub backends
+    # require a sealed model manifest under registry\models\<model>\ and a live backend.
+    if([string]::IsNullOrWhiteSpace($Prompt)){ throw "PIE_RUN_PROMPT_REQUIRED: use -Prompt <text>" }
+    $RunModel = Resolve-PieModel
+    $A = @("-RepoRoot",$RepoRoot,"-ModelId",$RunModel,"-Prompt",$Prompt)
+    if(-not [string]::IsNullOrWhiteSpace($Backend)){ $A += @("-Backend",$Backend) }
+    Invoke-PieScript -Script "pie_run_v1.ps1" -Args $A
+    return
+  }
+
+  "verify-engines" {
+    # Consolidated engine verification: parse-gate + persona alignment + Tier-0 + the three trios.
+    Invoke-PieScript -Script "_RUN_pie_engine_verify_all_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-IncludeTier0")
+    return
+  }
+
+  "seal-ollama" {
+    if([string]::IsNullOrWhiteSpace($Model)){ throw "PIE_SEAL_OLLAMA_MODEL_REQUIRED: use -Model <ollama_tag>" }
+    Invoke-PieInteractiveScript -Script "pie_seal_ollama_model_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-Model",$Model)
+    return
+  }
+
   default {
+    Write-Host ("Unknown command: " + $Command) -ForegroundColor Yellow
+    Write-Host "Run 'pie help' to see available commands." -ForegroundColor Yellow
     throw ("PIE_CLI_UNKNOWN_COMMAND: " + $Command)
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

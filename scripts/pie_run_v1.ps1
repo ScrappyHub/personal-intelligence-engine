@@ -2,7 +2,8 @@ param(
   [Parameter(Mandatory=$true)][string]$RepoRoot,
   [Parameter(Mandatory=$true)][string]$ModelId,
   [Parameter(Mandatory=$true)][string]$Prompt,
-  [ValidateSet('0.25','0.5','0.75','1.0')][string]$SpeedFactor='1.0'
+  [ValidateSet('0.25','0.5','0.75','1.0')][string]$SpeedFactor='1.0',
+  [ValidateSet('stub','ollama','llamacpp','onnx')][string]$Backend='stub'
 )
 
 $ErrorActionPreference='Stop'
@@ -32,8 +33,65 @@ $paramsHash = PIE_Sha256HexBytes ([System.Text.Encoding]::UTF8.GetBytes((NL_ToCa
 $inBytes = [System.Text.Encoding]::UTF8.GetBytes($Prompt)
 $inHash  = PIE_Sha256HexBytes $inBytes
 
-# Backend execution stub (replace with engine adapters but keep recording law)
-$output = ('PIE_STUB_OUTPUT model=' + $ModelId + ' speed=' + $SpeedFactor + ' prompt_sha256=' + $inHash + ' model_sums=' + $sumsSha)
+# Backend execution.
+# Recording law (input/output hashing, ledger, artifacts) is owned here regardless of backend.
+# Default 'stub' is deterministic and network-free, preserving the frozen Tier-0 pipeline.
+# See engine/README.md and engine/adapters/<name>/PIE_ENGINE_ADAPTER.v1.json.
+# Run a backend adapter as a child process, capturing stdout+stderr reliably. The terminating-error
+# preference is relaxed so a child that writes to stderr or exits non-zero (expected for negative
+# cases) is surfaced via the exit code + captured text, not lost to a NativeCommandError.
+function Invoke-BackendChild([string]$AdapterPath,[string[]]$AdapterArgs){
+  if(-not (Test-Path -LiteralPath $AdapterPath -PathType Leaf)){ PIE_Die ('PIE_ENGINE_BACKEND_UNAVAILABLE: ' + $AdapterPath) }
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $o = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $AdapterPath @AdapterArgs 2>&1 | Out-String
+    $code = $LASTEXITCODE
+  }
+  finally { $ErrorActionPreference = $prev }
+  return [pscustomobject]@{ out = $o.TrimEnd("`r","`n"); code = $code }
+}
+
+switch ($Backend) {
+
+  'stub' {
+    $output = ('PIE_STUB_OUTPUT model=' + $ModelId + ' speed=' + $SpeedFactor + ' prompt_sha256=' + $inHash + ' model_sums=' + $sumsSha)
+  }
+
+  'ollama' {
+    # Real local generation via the loopback Ollama adapter. Fail-closed: never fall back to stub.
+    # The sealed manifest may carry an explicit ollama_model tag (e.g. "qwen2.5-coder:1.5b") so a
+    # filesystem-safe sealed model_id can map to a real Ollama tag containing ':'. Falls back to
+    # the ModelId when the field is absent.
+    $ollamaModel = $ModelId
+    if (($mj.PSObject.Properties.Name -contains 'ollama_model') -and -not [string]::IsNullOrWhiteSpace([string]$mj.ollama_model)) {
+      $ollamaModel = [string]$mj.ollama_model
+    }
+    $r = Invoke-BackendChild (Join-Path $RepoRoot 'scripts\pie_backend_ollama_cmd_v1.ps1') @("-Model",$ollamaModel,"-Message",$Prompt)
+    if ($r.code -ne 0) { PIE_Die ('PIE_ENGINE_OLLAMA_FAILED: exit ' + $r.code + ' :: ' + $r.out) }
+    $output = $r.out
+    if ([string]::IsNullOrWhiteSpace($output)) { PIE_Die 'PIE_ENGINE_EMPTY_OUTPUT' }
+  }
+
+  'llamacpp' {
+    # Real local generation via a loopback llama.cpp server. Fail-closed: never fall back to stub.
+    $r = Invoke-BackendChild (Join-Path $RepoRoot 'scripts\pie_backend_llamacpp_cmd_v1.ps1') @("-Model",$ModelId,"-Message",$Prompt)
+    if ($r.code -ne 0) { PIE_Die ('PIE_ENGINE_LLAMACPP_FAILED: exit ' + $r.code + ' :: ' + $r.out) }
+    $output = $r.out
+    if ([string]::IsNullOrWhiteSpace($output)) { PIE_Die 'PIE_ENGINE_EMPTY_OUTPUT' }
+  }
+
+  'onnx' {
+    # Native offline generation via onnxruntime-genai (subprocess). Fail-closed; needs -RepoRoot
+    # so the wrapper can resolve the sealed model directory.
+    $r = Invoke-BackendChild (Join-Path $RepoRoot 'scripts\pie_backend_onnx_cmd_v1.ps1') @("-RepoRoot",$RepoRoot,"-Model",$ModelId,"-Message",$Prompt)
+    if ($r.code -ne 0) { PIE_Die ('PIE_ENGINE_ONNX_GENERATION_FAILED: exit ' + $r.code + ' :: ' + $r.out) }
+    $output = $r.out
+    if ([string]::IsNullOrWhiteSpace($output)) { PIE_Die 'PIE_ENGINE_EMPTY_OUTPUT' }
+  }
+
+  default { PIE_Die ('PIE_ENGINE_UNKNOWN_BACKEND: ' + $Backend) }
+}
 
 $outHash = PIE_Sha256HexBytes ([System.Text.Encoding]::UTF8.GetBytes($output))
 $runId   = ([guid]::NewGuid().ToString('n'))

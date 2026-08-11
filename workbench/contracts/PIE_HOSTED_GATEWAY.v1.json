@@ -1,0 +1,44 @@
+{
+  "schema": "pie.hosted.gateway.contract.v1",
+  "authentication": "secure_session_cookie",
+  "repository_boundary": "isolated_workspace",
+  "routes": [
+    { "method": "GET", "path": "/api/state" },
+    { "method": "GET", "path": "/api/projects" },
+    { "method": "GET", "path": "/api/sessions" },
+    { "method": "GET", "path": "/api/session/history" },
+    { "method": "POST", "path": "/api/repositories/import" },
+    { "method": "GET", "path": "/api/repositories/import/{job_id}" },
+    { "method": "POST", "path": "/api/session/start" },
+    { "method": "POST", "path": "/api/session/stop" },
+    { "method": "POST", "path": "/api/models/select" },
+    { "method": "POST", "path": "/api/haai/capture" },
+    { "method": "POST", "path": "/api/ask" }
+  ],
+  "required_controls": [
+    "authenticated_user",
+    "per_user_workspace_isolation",
+    "archive_path_validation",
+    "archive_file_count_limit",
+    "archive_expanded_size_limit",
+    "job_quota",
+    "secret_redaction",
+    "receipt_emission",
+    "persona_parity"
+  ],
+  "persona_parity": {
+    "requirement": "The hosted gateway MUST produce behavior identical to self-hosted-local PIE. Hosting is a transport, not a personality change.",
+    "persona_source": "engine/PIE_PERSONA.v1.txt",
+    "governed_context_source": "scripts/pie_context_build_v1.ps1 (or a byte-equivalent server-side builder)",
+    "pillars": ["identity_honesty", "minimalism", "local_hosted_parity"],
+    "applies_to_routes": ["/api/ask"],
+    "forbidden": "Hosting MUST NOT alter PIE's identity, honesty, or scope discipline, nor inject system prompts that change the persona. It MUST NOT claim to be a hosted assistant, and MUST NOT add features or scope the user did not request.",
+    "conformance": "A hosted deployment is non-conformant until it passes a persona/parity check equivalent to the local persona:contract, persona:shared, and persona:interactive checks in scripts/_RUN_pie_engine_verify_all_v1.ps1."
+  },
+  "forbidden_capabilities": [
+    "host_filesystem_paths",
+    "desktop_ipc",
+    "arbitrary_host_process_execution",
+    "loopback_request_token_reuse"
+  ]
+}

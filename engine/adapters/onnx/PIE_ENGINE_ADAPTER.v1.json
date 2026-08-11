@@ -1,0 +1,40 @@
+{
+  "schema": "pie.engine.adapter.contract.v1",
+  "adapter_id": "onnx",
+  "status": "scaffold",
+  "summary": "Native Windows, fully-offline local generation via onnxruntime-genai. Subprocess shape (not HTTP): PIE shells out to a local Python helper.",
+  "invoked_by": "scripts/pie_run_v1.ps1 -Backend onnx",
+  "delegates_to": "scripts/pie_backend_onnx_cmd_v1.ps1",
+  "generate_helper": "scripts/pie_backend_onnx_generate_v1.py",
+  "runtime_dependency": "onnxruntime-genai (pip)",
+  "network": "none",
+  "offline_first": true,
+  "integration_shape": "subprocess",
+  "recording_law_owner": "scripts/pie_run_v1.ps1",
+  "sealed_model_binding_required": true,
+  "produces": "output_bytes_only",
+  "model_dir_resolution_order": [
+    "env PIE_ONNX_MODEL_DIR",
+    "model_manifest.v1.json field onnx_model_dir",
+    "registry/models/<model_id>/onnx",
+    "models/<model_id>"
+  ],
+  "deterministic_replay": {
+    "cross_host": false,
+    "note": "Greedy decode (do_sample off, temperature 0) reduces variance but does not guarantee cross-host bit reproduction; the packet binds output to the sealed model set and host/time."
+  },
+  "error_tokens": [
+    "PIE_ENGINE_BACKEND_UNAVAILABLE",
+    "PIE_ENGINE_ONNX_PYTHON_MISSING",
+    "PIE_ENGINE_ONNX_MODEL_DIR_UNRESOLVED",
+    "PIE_ENGINE_ONNX_RUNTIME_MISSING",
+    "PIE_ENGINE_ONNX_MODEL_DIR_NOT_FOUND",
+    "PIE_ENGINE_ONNX_GENERATION_FAILED",
+    "PIE_ENGINE_ONNX_EMPTY"
+  ],
+  "fail_closed": true,
+  "sealed_fixture": "registry/models/pie-onnx-fixture",
+  "certification_test": "scripts/_selftest_pie_engine_onnx_v1.ps1",
+  "certification_green_token": "SELFTEST_PIE_ENGINE_ONNX_V1_GREEN",
+  "status_note": "Scaffold: authored to onnxruntime-genai's documented API; NOT yet executed against a real ONNX model. Negative + binding checks run against the sealed fixture with no model present; drop a real onnxruntime-genai export into the fixture onnx/ dir to run the positive check and flip scaffold -> preview -> ready. API surface may vary by onnxruntime-genai version."
+}

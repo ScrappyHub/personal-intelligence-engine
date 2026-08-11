@@ -1,0 +1,28 @@
+{
+  "schema": "pie.engine.adapter.contract.v1",
+  "adapter_id": "ollama",
+  "status": "preview",
+  "summary": "Real local text generation via the loopback Ollama host, opt-in from pie_run_v1.",
+  "invoked_by": "scripts/pie_run_v1.ps1 -Backend ollama",
+  "delegates_to": "scripts/pie_backend_ollama_cmd_v1.ps1",
+  "endpoint": "http://127.0.0.1:11434/api/generate",
+  "network": "loopback_only",
+  "offline_first": false,
+  "recording_law_owner": "scripts/pie_run_v1.ps1",
+  "sealed_model_binding_required": true,
+  "produces": "output_bytes_only",
+  "deterministic_replay": {
+    "cross_host": false,
+    "note": "Probabilistic model output; the packet binds output to the sealed model set and host/time, not cross-host reproduction."
+  },
+  "endpoint_env_override": "PIE_OLLAMA_URL",
+  "error_tokens": [
+    "PIE_ENGINE_BACKEND_UNAVAILABLE",
+    "PIE_ENGINE_OLLAMA_FAILED",
+    "PIE_ENGINE_EMPTY_OUTPUT"
+  ],
+  "fail_closed": true,
+  "certification_test": "scripts/_selftest_pie_engine_ollama_v1.ps1",
+  "certification_green_token": "SELFTEST_PIE_ENGINE_OLLAMA_V1_GREEN",
+  "status_note": "Drive to 'ready' by running the certification test on Windows with Ollama up and a sealed+pulled -ModelId. Green token flips status preview -> ready; do not mark ready from inspection."
+}

@@ -11,6 +11,16 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
+. (Join-Path $RepoRoot "scripts\_lib_pie_agent_session_v1.ps1")
+[void](PIE_GetAgentSession -RepoRoot $RepoRoot -SessionId $SessionId -RequireRunning -RequireIntegrity)
+$RunRoot = Join-Path $RepoRoot ("runs\" + $SessionId)
+if([string]::IsNullOrWhiteSpace($WorkingDirectory)){
+  $ProjectRepoPath = Join-Path $RunRoot "project_repo.txt"
+  if(Test-Path -LiteralPath $ProjectRepoPath -PathType Leaf){ $WorkingDirectory = (Get-Content -LiteralPath $ProjectRepoPath -Raw).Trim() }
+}
+if([string]::IsNullOrWhiteSpace($WorkingDirectory)){ $WorkingDirectory = $RepoRoot }
+if(-not (Test-Path -LiteralPath $WorkingDirectory -PathType Container)){ throw ("PIE_EXEC_WORKDIR_NOT_FOUND: " + $WorkingDirectory) }
+$WorkingDirectory = (Resolve-Path -LiteralPath $WorkingDirectory).Path
 
 function Extract-PathFromToken {
   param(

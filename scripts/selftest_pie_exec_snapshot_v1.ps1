@@ -35,8 +35,20 @@ if(Test-Path -LiteralPath $RunRoot -PathType Container){
 
 New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
 
-Write-Utf8NoBomLf -Path (Join-Path $RunRoot "project_repo.txt") -Text $WorkDir
 Write-Utf8NoBomLf -Path (Join-Path $WorkDir "before.txt") -Text "before"
+
+& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+  -File (Join-Path $RepoRoot "scripts\pie_agent_start_v1.ps1") `
+  -RepoRoot $RepoRoot `
+  -SessionId $SessionId `
+  -Backend "mock" `
+  -Model "snapshot-selftest" `
+  -ProjectRepo $WorkDir `
+  -Goal "Verify governed execution snapshots" | Out-Host
+
+if($LASTEXITCODE -ne 0){
+  throw "PIE_EXEC_SNAPSHOT_SELFTEST_START_FAIL"
+}
 
 $Cmd = 'Set-Content -LiteralPath ".\after.txt" -Value "after" -NoNewline'
 
@@ -88,6 +100,15 @@ $DiffObj = Get-Content -LiteralPath $Diff -Raw | ConvertFrom-Json
 
 if(-not (@($DiffObj.added) -contains "after.txt")){
   throw "PIE_EXEC_SNAPSHOT_SELFTEST_AFTER_NOT_ADDED"
+}
+
+& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+  -File (Join-Path $RepoRoot "scripts\pie_agent_stop_v1.ps1") `
+  -RepoRoot $RepoRoot `
+  -SessionId $SessionId | Out-Host
+
+if($LASTEXITCODE -ne 0){
+  throw "PIE_EXEC_SNAPSHOT_SELFTEST_STOP_FAIL"
 }
 
 Write-Host "PIE_EXEC_SNAPSHOT_SELFTEST_OK" -ForegroundColor Green

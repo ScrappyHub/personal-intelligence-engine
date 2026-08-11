@@ -1,0 +1,20 @@
+{
+  "schema": "pie.haai.adapter.contract.v1",
+  "direction": "pie_verified_turn_to_haai_packet",
+  "mode": "explicit_local_export",
+  "source_requirements": [
+    "verified_session_integrity",
+    "sha256_chained_conversation_turn",
+    "immutable_repository_model_goal_binding"
+  ],
+  "destination": "session_local_artifacts",
+  "haai_repository_access": "read_and_execute_only",
+  "required_receipt": "pie.haai.capture.receipt.v1",
+  "failure_semantics": "fail_closed_without_mutating_conversation",
+  "forbidden": [
+    "implicit_export",
+    "write_into_haai_repository",
+    "trust_haai_verification_without_independent_rehash",
+    "export_unverified_or_legacy_turns"
+  ]
+}

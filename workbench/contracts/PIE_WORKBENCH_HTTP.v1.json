@@ -1,0 +1,25 @@
+{
+  "schema": "pie.workbench.http.contract.v1",
+  "bind_host": "127.0.0.1",
+  "authentication": "per_process_request_token",
+  "max_request_bytes": 1048576,
+  "routes": [
+    { "method": "GET", "path": "/health", "auth": false },
+    { "method": "GET", "path": "/api/state", "auth": true },
+    { "method": "GET", "path": "/api/session/history", "auth": true },
+    { "method": "GET", "path": "/api/sessions", "auth": true },
+    { "method": "GET", "path": "/api/projects", "auth": true },
+    { "method": "POST", "path": "/api/session/start", "auth": true },
+    { "method": "POST", "path": "/api/session/stop", "auth": true },
+    { "method": "POST", "path": "/api/session/backup", "auth": true },
+    { "method": "POST", "path": "/api/session/restore", "auth": true },
+    { "method": "POST", "path": "/api/haai/capture", "auth": true },
+    { "method": "POST", "path": "/api/models/select", "auth": true },
+    { "method": "POST", "path": "/api/models/pull", "auth": true },
+    { "method": "GET", "path": "/api/models/pull/status", "auth": true },
+    { "method": "POST", "path": "/api/runtime/start", "auth": true },
+    { "method": "POST", "path": "/api/runtime/install", "auth": true },
+    { "method": "POST", "path": "/api/ask", "auth": true }
+  ],
+  "backend_boundary": "pie.ps1"
+}

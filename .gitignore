@@ -29,6 +29,12 @@ registry/**
 runs/**
 !runs/.gitkeep
 
+# Desktop build outputs
+desktop/node_modules/
+desktop/out/
+desktop/release/
+desktop/runtime/
+
 # Keep authoritative freeze / proofs / vectors tracked explicitly
 # Do not ignore proofs/, freeze/, or test_vectors/
 

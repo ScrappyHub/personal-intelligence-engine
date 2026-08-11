@@ -22,6 +22,9 @@ function Get-CommandClass {
 
   $C = $Command.Trim().ToLowerInvariant()
 
+  # Compound commands never inherit the trust class of their first token.
+  if($C -match '[;&|]'){ return "unknown" }
+
   if($C -match '^(get-childitem|dir|ls|type|cat|get-content|select-string)\b'){ return "read_only" }
   if($C -match '^(git status|git log|git diff)\b'){ return "git_status" }
   if($C -match '^(write-output|echo)\b'){ return "diagnostic" }
@@ -64,6 +67,22 @@ foreach($Pattern in @($Policy.deny_command_patterns)){
     $Decision = "DENY"
     $Reason = "DENY_PATTERN_MATCH"
     break
+  }
+}
+
+if($Decision -ne "DENY"){
+  foreach($Pattern in @(
+    '\bgit\s+reset\s+--hard\b',
+    '\bgit\s+clean\s+-[^\s]*f',
+    '\b(clear-content|format-volume)\b',
+    '\b(rd|rmdir|del|erase)\b\s+',
+    '\bstop-computer\b'
+  )){
+    if($Command.ToLowerInvariant() -match $Pattern){
+      $Decision = "DENY"
+      $Reason = "DENY_DESTRUCTIVE_PATTERN"
+      break
+    }
   }
 }
 

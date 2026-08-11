@@ -1,0 +1,13 @@
+{
+  "name": "PIE - Personal Intelligence Engine",
+  "short_name": "PIE",
+  "description": "Private local AI workspace",
+  "start_url": "/?surface=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#181419",
+  "theme_color": "#2a1829",
+  "icons": [
+    { "src": "/pie-icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

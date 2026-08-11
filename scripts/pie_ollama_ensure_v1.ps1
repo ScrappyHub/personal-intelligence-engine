@@ -5,7 +5,15 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$Ollama = (Get-Command ollama -ErrorAction Stop).Source
+$OllamaCommand = Get-Command ollama -ErrorAction SilentlyContinue
+if($null -ne $OllamaCommand){
+  $Ollama = $OllamaCommand.Source
+} else {
+  $Ollama = Join-Path $env:LOCALAPPDATA "Programs\Ollama\ollama.exe"
+  if(-not (Test-Path -LiteralPath $Ollama -PathType Leaf)){
+    throw "PIE_OLLAMA_MISSING: run 'pie runtime install' first"
+  }
+}
 
 function Test-OllamaApi {
   try {

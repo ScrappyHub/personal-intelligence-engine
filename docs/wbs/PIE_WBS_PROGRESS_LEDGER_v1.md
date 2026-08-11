@@ -1,5 +1,27 @@
 # PIE WBS + Progress Ledger (Tier-0 Standalone) v1
 
+> **STATUS UPDATE — 2026-08-10 (supersedes the 2026-02-21 snapshot below).**
+> The 2026-02-21 figures ("~35% spec / ~20% readiness, not yet end-to-end green, blocked on
+> signing + runner quoting") are **stale** and retained only for history. They are contradicted
+> by later verifiable evidence:
+> - First real FULL_GREEN standalone Tier-0 pipeline frozen 2026-03-08
+>   (`freeze/PIE_TIER0_FREEZE_MANIFEST_v1.txt`, tokens `SELFTEST_PIE_TIER0_V1_GREEN`,
+>   `PIE_TIER0_FULL_GREEN_V1_OK`). The signing + runner-quoting blockers listed at the bottom of
+>   this file are **resolved**.
+> - `pie doctor` (`runs/doctor/latest.json`, 2026-08-10): overall **attention**,
+>   `release_ready: false`. Ready: cli, memory, models, runtime, workbench, backups, haai.
+>   Attention: conversations, desktop. Contract-only: hosted. Unavailable: integrations.
+> - Backend engine layer added 2026-08-10 (`engine/`, opt-in `pie_run_v1 -Backend ollama`);
+>   default `stub` path unchanged. See `docs/PIE_AUDIT_2026-08-10.md` for the full findings and
+>   the current open-gap list.
+>
+> Net current position: the **standalone Tier-0 instrument is green and usable**; the **desktop
+> and hosted release tracks are not**, per the blocker set in
+> `docs/proposals/PIE_STATE_INTEGRITY_HARDENING.md`. Refresh or archive the historical snapshot
+> below in a future canonical pass.
+
+---
+
 WHAT THIS PROJECT IS TO SPEC
 - PIE is a Tier-0 Standalone offline-first personal AI engine runtime.
 - It must stand alone (no ecosystem integrations required) until proven and built.

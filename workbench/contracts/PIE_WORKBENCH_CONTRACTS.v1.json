@@ -6,7 +6,10 @@
     "pie.project.v1",
     "pie.adapter.contract.v1",
     "pie.benchmark.result.v1",
-    "pie.conversation.archive.v1"
+    "pie.conversation.archive.v1",
+    "pie.workbench.http.contract.v1",
+    "pie.haai.adapter.contract.v1",
+    "pie.session.backup.contract.v1"
   ],
   "public_release_rule": "Workbench must call stable CLI/backend contracts, not private scratch scripts."
 }

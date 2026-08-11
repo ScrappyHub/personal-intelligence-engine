@@ -1,0 +1,34 @@
+{
+  "schema": "pie.engine.adapter.contract.v1",
+  "adapter_id": "llamacpp",
+  "status": "scaffold",
+  "summary": "Real local text generation via a loopback llama.cpp server (OpenAI-style /completion), opt-in from pie_run_v1.",
+  "invoked_by": "scripts/pie_run_v1.ps1 -Backend llamacpp",
+  "delegates_to": "scripts/pie_backend_llamacpp_cmd_v1.ps1",
+  "endpoint": "http://127.0.0.1:8080/completion",
+  "endpoint_env_override": "PIE_LLAMACPP_URL",
+  "network": "loopback_only",
+  "offline_first": true,
+  "recording_law_owner": "scripts/pie_run_v1.ps1",
+  "sealed_model_binding_required": true,
+  "produces": "output_bytes_only",
+  "deterministic_replay": {
+    "cross_host": false,
+    "note": "Probabilistic model output; the packet binds output to the sealed model set and host/time, not cross-host reproduction. Greedy sampling (temperature 0) reduces but does not guarantee determinism."
+  },
+  "request": {
+    "method": "POST",
+    "body": { "prompt": "<string>", "n_predict": 512, "temperature": 0, "stream": false }
+  },
+  "response_field": "content",
+  "error_tokens": [
+    "PIE_ENGINE_BACKEND_UNAVAILABLE",
+    "PIE_ENGINE_LLAMACPP_FAILED",
+    "PIE_ENGINE_LLAMACPP_RESPONSE_FIELD_MISSING",
+    "PIE_ENGINE_EMPTY_OUTPUT"
+  ],
+  "fail_closed": true,
+  "certification_test": "scripts/_selftest_pie_engine_llamacpp_v1.ps1",
+  "certification_green_token": "SELFTEST_PIE_ENGINE_LLAMACPP_V1_GREEN",
+  "status_note": "Scaffold: authored to the ollama adapter pattern, NOT yet executed against a live llama.cpp server. Run the certification test on Windows with a llama.cpp server up + a sealed/served -ModelId to flip scaffold -> preview -> ready."
+}

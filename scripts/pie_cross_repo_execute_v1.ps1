@@ -103,11 +103,18 @@ foreach($RepoPlan in @($Plan.repo_plans)){
     $Command = Resolve-CapabilityCommand -CapabilityId $CapabilityId
 
     $ChildSession = $SessionId + "_xrepo_" + ([string]$StepCount)
-    $ChildRunRoot = Join-Path $RepoRoot ("runs\" + $ChildSession)
-    New-Item -ItemType Directory -Force -Path $ChildRunRoot | Out-Null
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+      -File (Join-Path $RepoRoot "scripts\pie_agent_start_v1.ps1") `
+      -RepoRoot $RepoRoot `
+      -SessionId $ChildSession `
+      -Backend "mock" `
+      -Model "cross-repo-executor" `
+      -ProjectRepo $TargetRepo `
+      -Goal ([string]$Plan.goal) | Out-Host
 
-    Write-Utf8NoBomLf -Path (Join-Path $ChildRunRoot "project_repo.txt") -Text $TargetRepo
-    Write-Utf8NoBomLf -Path (Join-Path $ChildRunRoot "goal.txt") -Text ([string]$Plan.goal)
+    if($LASTEXITCODE -ne 0){
+      throw ("PIE_CROSS_REPO_EXEC_SESSION_START_FAIL: " + $CapabilityId + " :: " + $TargetRepo)
+    }
 
     Write-Host ("PIE_CROSS_REPO_EXEC_STEP_START: " + $CapabilityId + " :: " + $TargetRepo) -ForegroundColor Cyan
 
@@ -121,6 +128,15 @@ foreach($RepoPlan in @($Plan.repo_plans)){
 
     if($LASTEXITCODE -ne 0){
       throw ("PIE_CROSS_REPO_EXEC_STEP_FAIL: " + $CapabilityId + " :: " + $TargetRepo)
+    }
+
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+      -File (Join-Path $RepoRoot "scripts\pie_agent_stop_v1.ps1") `
+      -RepoRoot $RepoRoot `
+      -SessionId $ChildSession | Out-Host
+
+    if($LASTEXITCODE -ne 0){
+      throw ("PIE_CROSS_REPO_EXEC_SESSION_STOP_FAIL: " + $CapabilityId + " :: " + $TargetRepo)
     }
 
     $Receipt = [ordered]@{

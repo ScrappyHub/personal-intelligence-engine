@@ -22,21 +22,25 @@ if(-not ($registry.profiles.PSObject.Properties.Name -contains $Profile)){
 
 $profileObj = $registry.profiles.$Profile
 $models = @($profileObj.models)
+$ModelsScript = Join-Path $RepoRoot "scripts\pie_models_v1.ps1"
+
+& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $ModelsScript -RepoRoot $RepoRoot -Action validate | Out-Host
+if($LASTEXITCODE -ne 0){ throw "PIE_SETUP_MODEL_REGISTRY_INVALID" }
 
 Write-Host ("PIE_SETUP_PROFILE: " + $Profile) -ForegroundColor Cyan
 
-$ollama = Get-Command ollama -ErrorAction SilentlyContinue
-if($null -eq $ollama){
-  throw "PIE_SETUP_OLLAMA_MISSING: install Ollama first, then rerun setup. Future installer will automate this."
-}
-
 if(-not $SkipPull){
   foreach($m in $models){
-    Write-Host ("PIE_SETUP_PULL_START: " + $m) -ForegroundColor Cyan
-    & ollama pull $m
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+      -File $ModelsScript -RepoRoot $RepoRoot -Action pull -Model $m
     if($LASTEXITCODE -ne 0){ throw ("PIE_SETUP_PULL_FAIL: " + $m) }
-    Write-Host ("PIE_SETUP_PULL_OK: " + $m) -ForegroundColor Green
   }
+}
+
+if(@($models).Count -gt 0 -and -not $SkipPull){
+  & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+    -File $ModelsScript -RepoRoot $RepoRoot -Action use -Model ([string]$models[0])
+  if($LASTEXITCODE -ne 0){ throw "PIE_SETUP_MODEL_SELECT_FAIL" }
 }
 
 Write-Host "PIE_SETUP_OK" -ForegroundColor Green

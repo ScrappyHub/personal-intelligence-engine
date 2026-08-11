@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#2a1829">
+  <title>PIE Workbench</title>
+  <link rel="icon" href="/pie-icon.png" type="image/png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/styles.css?v=20260806.5">
+  <style>__PIE_STYLES__</style>
+</head>
+<body>
+  <script>window.__PIE_BOOTSTRAP__ = __PIE_BOOTSTRAP_JSON__;</script>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="PIE workbench">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span class="brand-copy"><strong>PIE</strong><small id="surfaceLabel">Local workbench</small></span>
+      </a>
+      <div class="topbar-actions">
+        <button class="install-button" id="installButton" type="button" hidden><span aria-hidden="true">&#8595;</span> Install</button>
+        <div class="theme-switch" role="group" aria-label="Color theme">
+          <button type="button" data-theme-choice="auto" title="Auto (time of day)" aria-label="Auto theme by time of day">&#8986;</button>
+          <button type="button" data-theme-choice="sunset" title="Sunset theme" aria-label="Sunset theme">&#9728;</button>
+          <button type="button" data-theme-choice="dusk" title="Dusk theme" aria-label="Dusk theme">&#9790;</button>
+          <button type="button" data-theme-choice="system" title="Use system theme" aria-label="Use system theme">&#9681;</button>
+        </div>
+        <div class="topbar-status">
+          <span class="status-dot" id="runtimeDot" aria-hidden="true"></span>
+          <span id="runtimeLabel">Checking local runtime</span>
+          <button class="runtime-button" id="runtimeButton" type="button" hidden>Start runtime</button>
+          <button class="icon-button" id="refreshButton" type="button" title="Refresh status" aria-label="Refresh status">&#8635;</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="control-rail" aria-label="Session controls">
+        <div class="sunset-panel" aria-hidden="true"><span>Private by default</span></div>
+
+        <section class="rail-section session-section">
+          <div class="section-heading">
+            <div><span class="section-kicker">Workspace</span><h2>Session</h2></div>
+            <span class="state-pill" id="sessionState">Stopped</span>
+          </div>
+          <div class="session-browser">
+            <div class="field compact-field"><label for="sessionSelect">Conversations</label><select id="sessionSelect"><option value="">New conversation</option></select></div>
+            <button class="icon-button" id="newSessionButton" type="button" title="New conversation" aria-label="New conversation">+</button>
+          </div>
+          <div class="field-grid">
+            <div class="field"><label for="sessionId">Name</label><input id="sessionId" type="text" maxlength="64" autocomplete="off" spellcheck="false"></div>
+            <div class="field"><label for="targetRepo">Project folder</label><div class="path-control"><input id="targetRepo" type="text" autocomplete="off" spellcheck="false"><button class="path-button" id="repoPickerButton" type="button" title="Choose project folder" aria-label="Choose project folder" hidden>&#128193;</button></div></div>
+          </div>
+          <div class="field recent-projects" id="recentProjects" hidden><label for="recentRepoSelect">Recent projects</label><select id="recentRepoSelect"><option value="">Choose a recent project</option></select></div>
+          <div class="field"><label for="goal">Goal</label><textarea id="goal" rows="3" maxlength="500" placeholder="What are we working toward?"></textarea></div>
+          <div class="session-actions">
+            <button class="primary-button" id="startButton" type="button"><span aria-hidden="true">&#9654;</span> Start session</button>
+            <button class="secondary-button" id="stopButton" type="button" disabled><span aria-hidden="true">&#9632;</span> Stop</button>
+          </div>
+        </section>
+
+        <section class="rail-section model-section" id="modelSection">
+          <div class="section-heading">
+            <div><span class="section-kicker">Intelligence</span><h2 id="modelHeading">Local model</h2></div>
+            <span class="quiet-count" id="modelCount">0 downloaded</span>
+          </div>
+          <div class="field compact-field">
+            <label for="modelSelect">Active model</label>
+            <select id="modelSelect" disabled><option>Loading models...</option></select>
+          </div>
+          <p class="inline-note" id="modelNote">Models stay on this machine.</p>
+          <div class="catalog-block" id="catalogBlock">
+            <div class="field compact-field">
+              <label for="catalogSelect">Add a model</label>
+              <select id="catalogSelect" aria-label="Model to download"><option>Loading catalog...</option></select>
+            </div>
+            <button class="download-button" id="downloadButton" type="button"><span aria-hidden="true">&#8595;</span> Download</button>
+          </div>
+          <div class="model-details" id="modelDetails" aria-live="polite"></div>
+          <p class="inline-note" id="downloadNote">Downloads are stored by Ollama on this machine.</p>
+          <div class="download-progress" id="downloadProgress" hidden>
+            <div class="progress-detail"><span id="downloadProgressLabel">Preparing</span><strong id="downloadProgressPercent">0%</strong></div>
+            <div class="progress-track" aria-hidden="true"><span id="downloadProgressBar"></span></div>
+          </div>
+        </section>
+
+        <section class="rail-section integrations-section" id="integrationsSection">
+          <div class="section-heading"><div><span class="section-kicker">Optional</span><h2>Connections</h2></div></div>
+          <ul class="integration-list" id="integrationList" aria-label="Connection status">
+            <li><span>Supabase</span><span class="integration-state">Checking</span></li>
+            <li><span>Figma</span><span class="integration-state">Checking</span></li>
+            <li><span>Vercel</span><span class="integration-state">Checking</span></li>
+            <li><span>Cloudflare</span><span class="integration-state">Checking</span></li>
+          </ul>
+        </section>
+      </aside>
+
+      <section class="conversation" aria-label="Conversation">
+        <div class="conversation-header">
+          <div class="conversation-heading"><span class="eyebrow">Personal intelligence engine</span><h1 id="conversationTitle">Local conversation</h1><p id="conversationMeta">Start a session to begin</p></div>
+          <div class="conversation-actions">
+            <button class="header-icon-button" id="restoreButton" type="button" title="Restore conversation backup" aria-label="Restore conversation backup" hidden>&#8634;</button>
+            <button class="header-icon-button" id="backupButton" type="button" title="Back up this conversation" aria-label="Back up this conversation" hidden>&#8595;</button>
+            <button class="haai-button" id="haaiButton" type="button" title="Preserve the latest verified turn as HAAI evidence" hidden><span aria-hidden="true">&#9635;</span> Preserve</button>
+            <span class="privacy-label" id="privacyLabel"><span aria-hidden="true">&#9679;</span> On this machine</span>
+          </div>
+        </div>
+        <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+        <div class="messages" id="messages" aria-live="polite">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-horizon" aria-hidden="true"></div>
+            <span class="empty-kicker">Local. Private. Yours.</span>
+            <h2 id="emptyHeading">Your workspace is ready</h2>
+            <p id="emptyDescription">Choose a downloaded model, start a session, and build from here.</p>
+          </div>
+        </div>
+        <form class="composer" id="composer">
+          <label class="sr-only" for="messageInput">Message PIE</label>
+          <textarea id="messageInput" rows="1" maxlength="30000" placeholder="Ask PIE about this project" disabled></textarea>
+          <button class="send-button" id="sendButton" type="submit" title="Send message" aria-label="Send message" disabled>&#8593;</button>
+          <div class="composer-meta"><span id="thinkingStatus">Local session inactive</span><span id="characterCount">0 / 30,000</span></div>
+        </form>
+      </section>
+    </main>
+  </div>
+  <dialog class="secret-dialog" id="backupDialog">
+    <form id="backupDialogForm" method="dialog">
+      <h2 id="backupDialogTitle">Encrypt conversation backup</h2>
+      <label for="backupPassphrase">Passphrase</label>
+      <input id="backupPassphrase" type="password" minlength="14" maxlength="1024" autocomplete="new-password" required>
+      <div id="backupConfirmField">
+        <label for="backupPassphraseConfirm">Confirm passphrase</label>
+        <input id="backupPassphraseConfirm" type="password" minlength="14" maxlength="1024" autocomplete="new-password">
+      </div>
+      <p class="secret-dialog-error" id="backupDialogError" role="alert" hidden></p>
+      <div class="secret-dialog-actions">
+        <button class="secondary-button" id="backupDialogCancel" type="button">Cancel</button>
+        <button class="primary-button" type="submit">Continue</button>
+      </div>
+    </form>
+  </dialog>
+  <script>__PIE_APP_JS__</script>
+  <script src="/app.js?v=20260806.5"></script>
+</body>
+</html>
