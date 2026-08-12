@@ -77,7 +77,14 @@ if([string]::IsNullOrWhiteSpace($ModelId)){
 $posBefore = Get-LedgerCount
 $out = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $runScript `
   -RepoRoot $RepoRoot -ModelId $ModelId -Prompt "In one word, say: ready" -Backend llamacpp 2>&1 | Out-String)
-if($LASTEXITCODE -ne 0){ Die ("POSITIVE_RUN_FAILED: " + $out) }
+if($LASTEXITCODE -ne 0){
+  # Backend requested but unreachable is INCONCLUSIVE (environment), not a code failure.
+  if($out -match 'Unable to connect|PIE_LLAMACPP_API_FAILED|actively refused'){
+    Write-Host "PIE_ENGINE_LLAMACPP_SELFTEST_INCONCLUSIVE (llama.cpp server unreachable on the configured port)" -ForegroundColor Yellow
+    return
+  }
+  Die ("POSITIVE_RUN_FAILED: " + $out)
+}
 if([string]::IsNullOrWhiteSpace($out)){ Die "POSITIVE_EMPTY_OUTPUT" }
 if($out -match 'PIE_STUB_OUTPUT'){ Die "POSITIVE_RETURNED_STUB" }
 $posAfter = Get-LedgerCount

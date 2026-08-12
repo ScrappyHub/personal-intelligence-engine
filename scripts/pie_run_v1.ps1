@@ -117,14 +117,26 @@ $rec = @{
   time_utc     = (Get-Date).ToUniversalTime().ToString('o')
 }
 
-[void](PIE_AppendRunLedger $RepoRoot $rec)
+# Crash-atomic multi-file state change (B3 adoption): the input artifact, output artifact, and run
+# ledger apply all-or-nothing via a write-ahead transaction. Artifacts are staged before the ledger
+# so a pre-recovery partial state never shows a ledger entry without its artifacts; a transaction
+# interrupted mid-commit is completed by `pie recover`.
+. (Join-Path $RepoRoot 'scripts\_lib_pie_txn_v1.ps1')
 
-# Write plaintext artifacts (inputs/outputs) to support later sealing
 $inPath  = Join-Path $RepoRoot ('runs\run_' + $runId + '_input.txt')
 $outPath = Join-Path $RepoRoot ('runs\run_' + $runId + '_output.txt')
 
-NL_WriteUtf8NoBomLf $inPath  $Prompt
-NL_WriteUtf8NoBomLf $outPath $output
+$ledger    = PIE_ComputeRunLedgerLine $RepoRoot $rec
+$newLedger = $ledger.existing + $ledger.line + "`n"
+
+$txn = PIE_TxnBegin $RepoRoot
+PIE_TxnStage $txn $inPath      $Prompt
+PIE_TxnStage $txn $outPath     $output
+PIE_TxnStage $txn $ledger.path $newLedger
+PIE_TxnCommit $txn
+
+# Evidence receipt (matches prior PIE_AppendRunLedger behavior).
+NL_AppendReceipt $RepoRoot "pie_run_ledger" "appended run ledger entry" @{ run_id=$rec.run_id; line_sha256=(PIE_Sha256HexBytes([System.Text.Encoding]::UTF8.GetBytes($ledger.line))) }
 
 Write-Host ('OK: run recorded: ' + $runId) -ForegroundColor Green
 Write-Output $output

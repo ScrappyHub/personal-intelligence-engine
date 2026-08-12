@@ -388,6 +388,7 @@ function Show-Help {
   Write-Host "  show            Show latest benchmark/model results"
   Write-Host "  verify-runtime  Verify PIE runtime command surface"
   Write-Host "  verify-engines  Verify engine adapters (parse-gate + persona + Tier-0 + trios)"
+  Write-Host "  recover         Complete any interrupted multi-file state transaction"
   Write-Host ""
   Write-Host "Examples:"
   Write-Host "  pie runtime install"
@@ -1164,6 +1165,12 @@ switch($Command.ToLowerInvariant()){
   "verify-engines" {
     # Consolidated engine verification: parse-gate + persona alignment + Tier-0 + the three trios.
     Invoke-PieScript -Script "_RUN_pie_engine_verify_all_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-IncludeTier0")
+    return
+  }
+
+  "recover" {
+    # Complete any interrupted multi-file state transaction (roll back pre-commit, roll forward post-commit).
+    Invoke-PieScript -Script "pie_recover_v1.ps1" -Args @("-RepoRoot",$RepoRoot)
     return
   }
 
