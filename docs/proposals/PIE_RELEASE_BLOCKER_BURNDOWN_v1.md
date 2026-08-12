@@ -112,13 +112,25 @@ are ordered; items within a phase can parallelize.
     proves drop/keep/record, the no-silent-loss marker, determinism, and pinned survival at a tiny
     budget (green token `SELFTEST_PIE_COMPACTION_V1_GREEN`), wired into verify-all as
     `context:compaction`.
-  - REMAINING: integrate into the live send/context path (budget from the model's context window;
-    pinned facts sourced from memory), and emit a per-turn compaction receipt.
+  - LIVE-PATH FINDING 2026-08-11: `pie_agent_send_v1.ps1` ALREADY compacts deterministically for
+    every turn via `Get-CompactHistory` (keep first 2 + last 8 turns, omit the middle with a visible
+    "[N verified middle turns omitted]" marker, truncate long messages) — so the live path already
+    bounds the prompt with no silent unbounded growth. `PIE_CompactContext` is the canonical shared
+    primitive that additionally retains pinned facts.
+  - REMAINING: unify `Get-CompactHistory` onto `PIE_CompactContext` and add pinned-fact retention
+    (pinned facts sourced from memory) with a per-turn compaction receipt. Deferred because it
+    edits the conversation-integrity send path and changes what the model sees (needs session-suite
+    verification), not because compaction is missing.
   - DoD: compaction spec, positive test (pinned facts survive), negative test (silent fact loss
     is detected/flagged) — DONE at primitive level; receipt.
 - **B7. User memory controls**: inspect, provenance, accept, correct, forget, project-scope.
-  - DoD: per-control positive + negative test (e.g., "forget" leaves no residue), receipts;
-    surfaced in CLI + workbench.
+  - LANDED/PRESENT 2026-08-11: accept, list/search, forget (tombstone), and project-scope (lane +
+    `-Project`) already exist. Added `pie memory inspect` (read-only provenance: source file:line,
+    created_utc, lane/project, text) via `pie_memory_inspect_v1.ps1`, and `pie memory correct`
+    (supersede: accept the new fact in the same scope, then forget the old — accept-first so the old
+    is never lost on failure) via `pie_memory_correct_v1.ps1`. Both wired into the CLI + help.
+  - REMAINING: workbench surfacing; a dedicated correction-provenance link (supersedes_memory_id)
+    in the record; per-control negative tests + receipts.
 
 ## Phase 4 — Desktop distribution
 

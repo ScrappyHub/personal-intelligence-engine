@@ -390,6 +390,7 @@ function Show-Help {
   Write-Host "  verify-engines  Verify engine adapters (parse-gate + persona + Tier-0 + trios)"
   Write-Host "  recover         Complete any interrupted multi-file state transaction"
   Write-Host "  soak            Restart/soak harness (many turns x sessions + chain verification)"
+  Write-Host "  verify-full     Full-system release gate (engines + session + backup + soak)"
   Write-Host ""
   Write-Host "Examples:"
   Write-Host "  pie runtime install"
@@ -450,6 +451,8 @@ function Show-MemoryHelp {
   Write-Host "  pie memory list -Lane coding"
   Write-Host "  pie memory search -Text `"PowerShell preference`""
   Write-Host "  pie memory forget -MemoryId mem_<sha256>"
+  Write-Host "  pie memory inspect -MemoryId mem_<sha256>"
+  Write-Host "  pie memory correct -MemoryId mem_<sha256> -Text `"Corrected fact`" -Yes"
   Write-Host ""
 }
 
@@ -884,6 +887,21 @@ switch($Command.ToLowerInvariant()){
         return
       }
 
+      "inspect" {
+        if([string]::IsNullOrWhiteSpace($MemoryId)){ throw "PIE_MEMORY_ID_REQUIRED" }
+        Invoke-PieScript -Script "pie_memory_inspect_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-MemoryId",$MemoryId)
+        return
+      }
+
+      "correct" {
+        if([string]::IsNullOrWhiteSpace($MemoryId)){ throw "PIE_MEMORY_ID_REQUIRED" }
+        if([string]::IsNullOrWhiteSpace($Text)){ throw "PIE_MEMORY_TEXT_REQUIRED" }
+        $A = @("-RepoRoot",$RepoRoot,"-MemoryId",$MemoryId,"-Text",$Text)
+        if($Yes){ $A += "-Yes" }
+        Invoke-PieInteractiveScript -Script "pie_memory_correct_v1.ps1" -Args $A
+        return
+      }
+
       default {
         throw ("PIE_MEMORY_UNKNOWN_COMMAND: " + $Subcommand)
       }
@@ -1180,6 +1198,12 @@ switch($Command.ToLowerInvariant()){
     $A = @("-RepoRoot",$RepoRoot)
     if($Iterations -gt 0){ $A += @("-Cycles",[string]$Iterations) }
     Invoke-PieScript -Script "_RUN_pie_soak_v1.ps1" -Args $A
+    return
+  }
+
+  "verify-full" {
+    # Full-system release gate: engines + session recovery + backup + soak, all green required.
+    Invoke-PieScript -Script "_RUN_pie_verify_full_v1.ps1" -Args @("-RepoRoot",$RepoRoot)
     return
   }
 
