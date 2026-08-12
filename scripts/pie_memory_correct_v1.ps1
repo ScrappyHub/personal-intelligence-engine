@@ -14,7 +14,7 @@ $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 # the old one. Accept-then-forget order is deliberate — if the new record fails, the old is preserved
 # (never a window with neither). B7 (user memory controls: correction).
 
-$Records = @(PIE_MemoryRecords -RepoRoot $RepoRoot -Project "" -Query "" -Lane "all" -IncludeAllProjects:$true -Limit 1000000)
+$Records = @(PIE_MemoryRecords -RepoRoot $RepoRoot -Project "" -Query "" -Lane "all" -IncludeAllProjects:$true -Limit 200)
 $Match = @($Records | Where-Object { $_.memory_id -eq $MemoryId })
 if($Match.Count -eq 0){ throw ("PIE_MEMORY_NOT_FOUND: " + $MemoryId) }
 $Old = $Match[0]

@@ -12,7 +12,7 @@ $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 # Read-only provenance view of a single memory: where it came from (source file + line), when it was
 # recorded, its lane/project scope, and the stored text. B7 (user memory controls: inspect/provenance).
 
-$Records = @(PIE_MemoryRecords -RepoRoot $RepoRoot -MemoryRoot $MemoryRoot -Project "" -Query "" -Lane "all" -IncludeAllProjects:$true -Limit 1000000)
+$Records = @(PIE_MemoryRecords -RepoRoot $RepoRoot -MemoryRoot $MemoryRoot -Project "" -Query "" -Lane "all" -IncludeAllProjects:$true -Limit 200)
 $Match = @($Records | Where-Object { $_.memory_id -eq $MemoryId })
 if($Match.Count -eq 0){ throw ("PIE_MEMORY_NOT_FOUND: " + $MemoryId) }
 $R = $Match[0]
