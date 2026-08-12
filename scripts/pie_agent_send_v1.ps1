@@ -405,8 +405,9 @@ $Turn = [ordered]@{
 }
 $Line = ($Turn | ConvertTo-Json -Depth 8 -Compress) + "`n"
 
-[System.IO.File]::AppendAllText($HistoryFile,$Line,$Enc)
-[System.IO.File]::AppendAllText((Join-Path $RunRoot "transcript.ndjson"),$Line,$Enc)
+# Crash-safe dual append (B3): conversation.ndjson + transcript.ndjson apply as one journaled unit,
+# so a crash between them is rolled forward on the next session load. Happy-path bytes are unchanged.
+PIE_AppendTurnPair -RunRoot $RunRoot -SessionId $SessionId -Line $Line -TurnHash $TurnHash
 
 $SessionLock.Dispose()
 $SessionLock = $null

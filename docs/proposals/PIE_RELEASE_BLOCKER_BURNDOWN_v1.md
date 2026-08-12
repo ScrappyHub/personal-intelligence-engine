@@ -54,8 +54,38 @@ are ordered; items within a phase can parallelize.
 
 - **B3. Process-kill and power-loss fault injection** around each multi-file transition (kill
   between file N and N+1; assert atomic recovery or clean fail).
-  - DoD: kill-at-each-step harness, recovery positive test, corruption-detected negative test,
-    NDJSON receipt log.
+  - FOUNDATION LANDED 2026-08-11: `scripts/_lib_pie_txn_v1.ps1` provides a write-ahead journal
+    (`PIE_TxnBegin`/`Stage`/`Commit`/`Recover`) giving all-or-nothing application of a multi-file
+    change: killed before the COMMIT marker rolls back, killed after rolls forward, on recovery.
+    `scripts/_selftest_pie_txn_v1.ps1` injects kill-before-commit, kill-after-commit-mid-apply,
+    and idempotent-recovery (green token `SELFTEST_PIE_TXN_V1_GREEN`), wired into verify-all as
+    `state:transaction`.
+  - FIRST ADOPTION LANDED 2026-08-11: `pie_run_v1` now applies its run ledger + input artifact +
+    output artifact as one crash-atomic transaction (artifacts staged before the ledger;
+    `PIE_ComputeRunLedgerLine` preserves the exact prev_hash chain). `pie recover` completes any
+    interrupted transaction. `scripts/_selftest_pie_run_seal_txn_v1.ps1` verifies a real stub run
+    seals atomically with no orphan txn dir (green token `SELFTEST_PIE_RUN_SEAL_TXN_V1_GREEN`).
+  - SESSION PATH FINDING 2026-08-11: the session STATE write is already crash-atomic and
+    fault-tested — `PIE_WriteSessionPair` uses a `pending-transition.json` write-ahead journal +
+    `PIE_RecoverSessionTransition` roll-forward, exercised via the `PIE_FAULT_AFTER_SESSION_STATE_WRITE`
+    hook in `selftest_pie_drift_boundaries_v1.ps1`. Do NOT retrofit the generic txn there.
+    The narrower remaining gap: `pie_agent_send_v1.ps1` (~lines 408-409) appends the turn line to
+    two files (HistoryFile then transcript.ndjson) as plain non-atomic appends under the lock — a
+    crash between them desyncs the two, and either append can leave a torn tail. Recommended fix:
+    a `pending-turn.json` journal (turn line + both target paths + turn_sha256) written before the
+    appends and cleared after, with idempotent roll-forward on session load (append the line to any
+    target whose last entry lacks that turn_sha256), plus torn-tail detection on transcript read.
+  - SESSION TURN ADOPTION LANDED 2026-08-11: `_lib_pie_agent_session_v1.ps1` now has
+    `PIE_AppendTurnPair` (pending-turn journal + dual append; happy-path bytes unchanged),
+    `PIE_RecoverTurnAppend` (roll-forward, invoked in `PIE_GetAgentSession` on every load), and
+    read-side `PIE_LastTurnInfo`/`PIE_TrimTornTail` (torn-trailing-line tolerance during recovery,
+    without weakening the strict `PIE_GetConversationTurns` verifier). `pie_agent_send_v1.ps1` uses
+    it. Fault hook `PIE_FAULT_AFTER_TURN_HISTORY_APPEND` + `_selftest_pie_session_turn_recovery_v1.ps1`
+    prove desync-then-reconcile (green token `SELFTEST_PIE_SESSION_TURN_RECOVERY_V1_GREEN`).
+  - REMAINING: adopt the transaction for backup export; add OS-level process-kill injection (not
+    just simulated crash state); soak across many turns/sessions.
+  - DoD: kill-at-each-step harness, recovery positive test, corruption-detected negative test
+    (DONE at primitive level), NDJSON receipt log.
 - **B4. Multi-hour / multi-day restart + soak** across multiple repositories and sessions
   (concurrent chat + memory + backup under churn).
   - DoD: scheduled soak runner, pass criteria (zero integrity failures, zero cross-scope

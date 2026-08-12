@@ -225,6 +225,82 @@ function PIE_RecoverSessionTransition {
   finally { if($null -ne $RecoveryLock){ $RecoveryLock.Dispose() } }
 }
 
+function PIE_TurnAppendTargets {
+  param([Parameter(Mandatory=$true)][string]$RunRoot)
+  return @((Join-Path $RunRoot "conversation.ndjson"), (Join-Path $RunRoot "transcript.ndjson"))
+}
+
+# Last complete turn_sha256 in an ndjson file, tolerating a torn trailing line (interrupted append).
+function PIE_LastTurnInfo {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ return [pscustomobject]@{ hash=""; torn=$false } }
+  $Enc = New-Object System.Text.UTF8Encoding($false)
+  $Raw = [System.IO.File]::ReadAllText($Path,$Enc)
+  if([string]::IsNullOrEmpty($Raw)){ return [pscustomobject]@{ hash=""; torn=$false } }
+  $Torn = -not $Raw.EndsWith("`n")
+  $Lines = @($Raw -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+  $Hash = ""
+  for($i=$Lines.Count-1; $i -ge 0; $i--){
+    try { $Obj = $Lines[$i] | ConvertFrom-Json; $H=[string](PIE_GetSessionProperty -Object $Obj -Name "turn_sha256"); if(-not [string]::IsNullOrWhiteSpace($H)){ $Hash=$H; break } } catch { }
+  }
+  return [pscustomobject]@{ hash=$Hash; torn=$Torn }
+}
+
+# Trim a torn (non-newline-terminated) trailing line so a clean append can follow.
+function PIE_TrimTornTail {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){ return }
+  $Enc = New-Object System.Text.UTF8Encoding($false)
+  $Raw = [System.IO.File]::ReadAllText($Path,$Enc)
+  if([string]::IsNullOrEmpty($Raw) -or $Raw.EndsWith("`n")){ return }
+  $Idx = $Raw.LastIndexOf("`n")
+  $Trimmed = $(if($Idx -ge 0){ $Raw.Substring(0,$Idx+1) } else { "" })
+  PIE_WriteAtomicText -Path $Path -Text $Trimmed
+}
+
+# Crash-safe dual append of a conversation turn to conversation.ndjson + transcript.ndjson.
+# A pending-turn journal is written first (the commit point); recovery rolls forward from it so both
+# files always end with the same committed turn. Happy-path bytes are identical to a plain append.
+function PIE_AppendTurnPair {
+  param(
+    [Parameter(Mandatory=$true)][string]$RunRoot,
+    [Parameter(Mandatory=$true)][string]$SessionId,
+    [Parameter(Mandatory=$true)][string]$Line,
+    [Parameter(Mandatory=$true)][string]$TurnHash
+  )
+  $StateRoot = Join-Path $RunRoot "state"
+  if(-not (Test-Path -LiteralPath $StateRoot -PathType Container)){ New-Item -ItemType Directory -Force -Path $StateRoot | Out-Null }
+  $PendingPath = Join-Path $StateRoot "pending-turn.json"
+  $Targets = PIE_TurnAppendTargets -RunRoot $RunRoot
+  $Journal = [ordered]@{ schema="pie.session.turn.pending.v1"; session_id=$SessionId; turn_sha256=$TurnHash; line=$Line; targets=$Targets; created_utc=[DateTime]::UtcNow.ToString("o") }
+  PIE_WriteAtomicText -Path $PendingPath -Text (($Journal | ConvertTo-Json -Depth 8) + "`n")
+  $Enc = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::AppendAllText($Targets[0],$Line,$Enc)
+  if($env:PIE_FAULT_AFTER_TURN_HISTORY_APPEND -eq "1"){ throw "PIE_FAULT_INJECTED_AFTER_TURN_HISTORY_APPEND" }
+  [System.IO.File]::AppendAllText($Targets[1],$Line,$Enc)
+  Remove-Item -LiteralPath $PendingPath -Force
+}
+
+# Roll forward an interrupted turn append: ensure every target ends with the journaled turn.
+function PIE_RecoverTurnAppend {
+  param([Parameter(Mandatory=$true)][string]$RunRoot,[Parameter(Mandatory=$true)][string]$SessionId)
+  $PendingPath = Join-Path $RunRoot "state\pending-turn.json"
+  if(-not (Test-Path -LiteralPath $PendingPath -PathType Leaf)){ return }
+  try { $Journal = PIE_ReadUtf8Text -Path $PendingPath | ConvertFrom-Json }
+  catch { throw ("PIE_SESSION_TURN_PENDING_INVALID: " + $SessionId + " :: " + $_.Exception.Message) }
+  if([string]$Journal.schema -ne "pie.session.turn.pending.v1" -or [string]$Journal.session_id -ne $SessionId){ throw ("PIE_SESSION_TURN_PENDING_BAD: " + $SessionId) }
+  $Line = [string]$Journal.line
+  $TurnHash = [string]$Journal.turn_sha256
+  $Enc = New-Object System.Text.UTF8Encoding($false)
+  foreach($T in @($Journal.targets)){
+    $P = [string]$T
+    PIE_TrimTornTail -Path $P
+    $Info = PIE_LastTurnInfo -Path $P
+    if($Info.hash -ne $TurnHash){ [System.IO.File]::AppendAllText($P,$Line,$Enc) }
+  }
+  Remove-Item -LiteralPath $PendingPath -Force
+}
+
 function PIE_GetConversationTurns {
   param(
     [Parameter(Mandatory=$true)][string]$Path,
@@ -311,6 +387,7 @@ function PIE_GetAgentSession {
   }
 
   PIE_RecoverSessionTransition -RunRoot $RunRoot -SessionId $SessionId
+  PIE_RecoverTurnAppend -RunRoot $RunRoot -SessionId $SessionId
 
   try { $Manifest = PIE_ReadUtf8Text -Path (Join-Path $RunRoot "session_manifest.json") | ConvertFrom-Json }
   catch { throw ("PIE_AGENT_MANIFEST_INVALID: " + $SessionId + " :: " + $_.Exception.Message) }
