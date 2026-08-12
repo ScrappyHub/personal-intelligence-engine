@@ -40,7 +40,9 @@ $Reason = if($Mode -eq "auto_accept"){ "MEMORY_POLICY_AUTO_ACCEPT" } elseif($Mod
 if($Mode -eq "ask"){
   $PolicyScript = Join-Path $RepoRoot "scripts\pie_policy_decide_v1.ps1"
   if(-not (Test-Path -LiteralPath $PolicyScript -PathType Leaf)){ throw "PIE_POLICY_SCRIPT_MISSING" }
-  $PolicyOut = @(& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $PolicyScript -RepoRoot $RepoRoot -Event "memory_accept" -Project $Project -Text $Text 2>&1) -join "`n"
+  $PolicyArgs = @("-RepoRoot",$RepoRoot,"-Event","memory_accept","-Text",$Text)
+  if(-not [string]::IsNullOrWhiteSpace($Project)){ $PolicyArgs += @("-Project",$Project) }
+  $PolicyOut = @(& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $PolicyScript @PolicyArgs 2>&1) -join "`n"
   if($LASTEXITCODE -ne 0){ throw ("PIE_POLICY_DECISION_FAIL: " + $PolicyOut) }
   $DecisionLine = @(($PolicyOut -split "`n") | Where-Object { $_ -like "PIE_POLICY_DECISION:*" } | Select-Object -First 1)
   if($DecisionLine.Count -ne 1){ throw "PIE_POLICY_DECISION_OUTPUT_MISSING" }
