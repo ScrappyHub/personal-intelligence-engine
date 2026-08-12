@@ -105,8 +105,17 @@ are ordered; items within a phase can parallelize.
   - DoD: eval set + scoring, per-tier baseline receipt, regression gate on re-run.
 - **B6. Deterministic conversation compaction / pinned-fact behavior** when a chat exceeds the
   active context window.
+  - FOUNDATION LANDED 2026-08-11: `scripts/_lib_pie_compaction_v1.ps1` (`PIE_CompactContext`) keeps
+    all pinned facts + the most recent turns that fit a char budget, replaces dropped older turns
+    with a deterministic marker, and returns the exact dropped turn hashes (no silent loss; no LLM
+    summarization -> identical input yields identical output). `scripts/_selftest_pie_compaction_v1.ps1`
+    proves drop/keep/record, the no-silent-loss marker, determinism, and pinned survival at a tiny
+    budget (green token `SELFTEST_PIE_COMPACTION_V1_GREEN`), wired into verify-all as
+    `context:compaction`.
+  - REMAINING: integrate into the live send/context path (budget from the model's context window;
+    pinned facts sourced from memory), and emit a per-turn compaction receipt.
   - DoD: compaction spec, positive test (pinned facts survive), negative test (silent fact loss
-    is detected/flagged), receipt.
+    is detected/flagged) — DONE at primitive level; receipt.
 - **B7. User memory controls**: inspect, provenance, accept, correct, forget, project-scope.
   - DoD: per-control positive + negative test (e.g., "forget" leaves no residue), receipts;
     surfaced in CLI + workbench.
