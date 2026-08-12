@@ -88,8 +88,15 @@ are ordered; items within a phase can parallelize.
     (DONE at primitive level), NDJSON receipt log.
 - **B4. Multi-hour / multi-day restart + soak** across multiple repositories and sessions
   (concurrent chat + memory + backup under churn).
-  - DoD: scheduled soak runner, pass criteria (zero integrity failures, zero cross-scope
-    bleed), durable soak receipt with timings.
+  - FOUNDATION LANDED 2026-08-11: `scripts/_RUN_pie_soak_v1.ps1` (also `pie soak`) drives many
+    turns across multiple mock sessions over repeated cycles, re-loads + verifies every session's
+    chain each cycle, and can inject the turn-append fault (`-FaultEvery N`) and confirm recovery.
+    Parameterized (`-Sessions/-TurnsPerSession/-Cycles`) so small = smoke, large = multi-hour;
+    requires zero integrity failures and writes a timed receipt to `runs/soak/latest.json`
+    (green token `PIE_SOAK_V1_GREEN`).
+  - REMAINING: schedule a genuine multi-hour/multi-day run; add real concurrent writers and a
+    second repository; include backup export/restore in the churn; OS-level process restart (not
+    just in-process re-load).
 
 ## Phase 3 — Model semantics & user memory controls
 

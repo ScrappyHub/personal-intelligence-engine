@@ -389,6 +389,7 @@ function Show-Help {
   Write-Host "  verify-runtime  Verify PIE runtime command surface"
   Write-Host "  verify-engines  Verify engine adapters (parse-gate + persona + Tier-0 + trios)"
   Write-Host "  recover         Complete any interrupted multi-file state transaction"
+  Write-Host "  soak            Restart/soak harness (many turns x sessions + chain verification)"
   Write-Host ""
   Write-Host "Examples:"
   Write-Host "  pie runtime install"
@@ -1171,6 +1172,14 @@ switch($Command.ToLowerInvariant()){
   "recover" {
     # Complete any interrupted multi-file state transaction (roll back pre-commit, roll forward post-commit).
     Invoke-PieScript -Script "pie_recover_v1.ps1" -Args @("-RepoRoot",$RepoRoot)
+    return
+  }
+
+  "soak" {
+    # Restart/soak harness: many turns across mock sessions with re-load + chain verification.
+    $A = @("-RepoRoot",$RepoRoot)
+    if($Iterations -gt 0){ $A += @("-Cycles",[string]$Iterations) }
+    Invoke-PieScript -Script "_RUN_pie_soak_v1.ps1" -Args $A
     return
   }
 

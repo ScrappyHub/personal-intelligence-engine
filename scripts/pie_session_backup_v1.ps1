@@ -257,7 +257,18 @@ if($Action -eq "export"){
       [IO.File]::WriteAllText((Join-Path $StageContent "PIE_SESSION_BACKUP.json"),(($Manifest | ConvertTo-Json -Depth 12) + "`n"),$Enc)
       $PlainArchive = Join-Path $Stage "payload.zip"
       Compress-Archive -Path (Join-Path $StageContent "*") -DestinationPath $PlainArchive -CompressionLevel Optimal
-      $null = Invoke-BackupCrypto -Mode encrypt -InputPath $PlainArchive -OutputPath $Destination -Secret $Secret
+      # Crash-atomic export: encrypt to a temp path, verify it decrypts + matches, then atomically
+      # promote to the final .piebak. A crash never leaves a partial or unverifiable archive at the
+      # destination path (either the complete verified backup exists there, or nothing does).
+      $TempOut = Join-Path $Stage "archive.piebak.partial"
+      $null = Invoke-BackupCrypto -Mode encrypt -InputPath $PlainArchive -OutputPath $TempOut -Secret $Secret
+      if($env:PIE_FAULT_AFTER_BACKUP_ENCRYPT -eq "1"){ throw "PIE_FAULT_INJECTED_AFTER_BACKUP_ENCRYPT" }
+      $SelfCheck = Expand-VerifiedBackup -Path $TempOut -Secret $Secret
+      try {
+        if([string]$SelfCheck.manifest.backup_id -ne [string]$Manifest.backup_id){ throw ("PIE_SESSION_BACKUP_SELFVERIFY_MISMATCH: " + [string]$Manifest.backup_id) }
+      }
+      finally { if(Test-Path -LiteralPath $SelfCheck.stage -PathType Container){ Remove-Item -LiteralPath $SelfCheck.stage -Recurse -Force } }
+      [System.IO.File]::Move($TempOut, $Destination)
     }
     finally { if(Test-Path -LiteralPath $Stage -PathType Container){ Remove-Item -LiteralPath $Stage -Recurse -Force } }
     $Receipt = Write-BackupReceipt -Event "export" -Status "verified" -Id $Manifest.backup_id -Session $SessionId -Archive $Destination -Detail ("files=" + $Files.Count)
