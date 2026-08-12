@@ -1,0 +1,39 @@
+{
+    "schema":  "pie.state.integrity.freeze.v1",
+    "frozen_utc":  "2026-08-12T17:02:33.4725899Z",
+    "git_head":  "75a7e5c03044765f607f9aecf087642ac7caade8",
+    "verify":  "PIE_VERIFY_FULL_V1_GREEN",
+    "gate_green":  true,
+    "source_clean":  false,
+    "sealed_components":  [
+                              "B1 schema-migration foundation (version guard + fail-closed)",
+                              "B2 atomic-write foundation + run-seal adoption",
+                              "B3 transaction foundation + adoptions: run-seal, session-turn append, backup export",
+                              "B4 soak/restart harness (fault-injected recovery verified)",
+                              "B6 deterministic compaction with pinned-fact retention (foundation)",
+                              "B7 memory inspect + correct (provenance + safe supersede)",
+                              "engine adapters: ollama/llamacpp/onnx (opt-in) with shared persona + local/hosted parity",
+                              "pie verify-full consolidated release gate"
+                          ],
+    "green_tokens":  [
+                         "PIE_VERIFY_FULL_V1_GREEN",
+                         "PIE_ENGINE_VERIFY_ALL_V1_GREEN",
+                         "PIE_SOAK_V1_GREEN",
+                         "SELFTEST_PIE_ATOMIC_WRITE_V1_GREEN",
+                         "SELFTEST_PIE_TXN_V1_GREEN",
+                         "SELFTEST_PIE_MIGRATIONS_V1_GREEN",
+                         "SELFTEST_PIE_COMPACTION_V1_GREEN",
+                         "SELFTEST_PIE_SESSION_TURN_RECOVERY_V1_GREEN",
+                         "SELFTEST_PIE_RUN_SEAL_TXN_V1_GREEN",
+                         "PIE_SESSION_BACKUP_SELFTEST_OK"
+                     ],
+    "deferred_next":  [
+                          "OS-level process-kill / power-loss injection (vs simulated crash state)",
+                          "genuine multi-hour/multi-day soak with concurrent writers + second repo",
+                          "real-model semantic drift evaluation across model tiers (B5)",
+                          "compaction live-path unification onto PIE_CompactContext + pinned facts from memory",
+                          "hosted gateway implementation + tenant isolation (Phase 5)",
+                          "desktop release: migrations coverage, updater rollback, Windows signing (Phase 4)"
+                      ],
+    "cap_rationale_doc":  "docs/PIE_SESSION_CAP_2026-08-12.md"
+}
