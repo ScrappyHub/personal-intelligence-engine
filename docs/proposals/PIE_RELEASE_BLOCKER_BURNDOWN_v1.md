@@ -60,8 +60,14 @@ are ordered; items within a phase can parallelize.
   -- a genuine crash), and proves `PIE_TxnRecover` rolls back a pre-commit kill and rolls forward a
   post-commit kill. Green token `SELFTEST_PIE_KILL_INJECTION_V1_GREEN`, wired into verify-engines as
   `state:kill_injection`.
-  - REMAINING: extend OS-kill injection to the session-turn append and backup-export transitions,
-    and to power-loss simulation (not just process kill).
+  - SESSION-TURN OS-KILL LANDED 2026-08-12: `PIE_AppendTurnPair` gained a real kill window
+    (`PIE_SESSION_KILL_AFTER_HISTORY_APPEND`, between the conversation and transcript appends).
+    `scripts/_selftest_pie_session_kill_injection_v1.ps1` runs a live mock `pie agent send`,
+    `Stop-Process -Force` kills it mid-write, and proves `PIE_RecoverTurnAppend` reconciles the two
+    files on load (green token `SELFTEST_PIE_SESSION_KILL_INJECTION_V1_GREEN`, wired as
+    `state:session_kill`).
+  - REMAINING: extend OS-kill injection to the backup-export transition; add true power-loss
+    simulation (not just process kill).
 
 
 - **B3. Process-kill and power-loss fault injection** around each multi-file transition (kill

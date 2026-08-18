@@ -261,6 +261,16 @@ function PIE_TrimTornTail {
 # Crash-safe dual append of a conversation turn to conversation.ndjson + transcript.ndjson.
 # A pending-turn journal is written first (the commit point); recovery rolls forward from it so both
 # files always end with the same committed turn. Happy-path bytes are identical to a plain append.
+# OS-kill injection support for the turn write: signal readiness at a transition, then block so an
+# external harness can Stop-Process -Force here (no finally/cleanup runs). No-op unless the env is set.
+function PIE_SessionKillWindow {
+  param([Parameter(Mandatory=$true)][string]$RunRoot,[Parameter(Mandatory=$true)][string]$Point)
+  $sig = $env:PIE_SESSION_KILL_SIGNAL
+  if([string]::IsNullOrWhiteSpace($sig)){ $sig = Join-Path $RunRoot "state\session_kill_ready.txt" }
+  PIE_WriteAtomicText -Path $sig -Text ($Point + "|" + [DateTime]::UtcNow.ToString("o"))
+  Start-Sleep -Seconds 30
+}
+
 function PIE_AppendTurnPair {
   param(
     [Parameter(Mandatory=$true)][string]$RunRoot,
@@ -276,6 +286,7 @@ function PIE_AppendTurnPair {
   PIE_WriteAtomicText -Path $PendingPath -Text (($Journal | ConvertTo-Json -Depth 8) + "`n")
   $Enc = New-Object System.Text.UTF8Encoding($false)
   [System.IO.File]::AppendAllText($Targets[0],$Line,$Enc)
+  if($env:PIE_SESSION_KILL_AFTER_HISTORY_APPEND -eq "1"){ PIE_SessionKillWindow -RunRoot $RunRoot -Point "after_history_append" }
   if($env:PIE_FAULT_AFTER_TURN_HISTORY_APPEND -eq "1"){ throw "PIE_FAULT_INJECTED_AFTER_TURN_HISTORY_APPEND" }
   [System.IO.File]::AppendAllText($Targets[1],$Line,$Enc)
   Remove-Item -LiteralPath $PendingPath -Force
