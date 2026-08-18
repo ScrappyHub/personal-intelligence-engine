@@ -1,7 +1,7 @@
 {
     "schema":  "pie.state.integrity.freeze.v1",
-    "frozen_utc":  "2026-08-18T02:12:44.3142397Z",
-    "git_head":  "540d728872f4f6dafc0ad25cbd0c095f2ef9f92f",
+    "frozen_utc":  "2026-08-18T02:22:44.5624325Z",
+    "git_head":  "d84b1c279f7ad3b7bc5ac04fa877037a1e3c3288",
     "verify":  "PIE_VERIFY_FULL_V1_GREEN",
     "gate_green":  true,
     "source_clean":  true,
