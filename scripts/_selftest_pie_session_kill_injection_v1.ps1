@@ -43,12 +43,19 @@ try {
   $env:PIE_SESSION_KILL_SIGNAL = $sig
   $env:PIE_SESSION_KILL_AFTER_HISTORY_APPEND = "1"
   try {
-    $p = Start-Process -FilePath "powershell.exe" -PassThru -WindowStyle Hidden -ArgumentList @(
-      "-NoProfile","-ExecutionPolicy","Bypass","-File",$send,"-RepoRoot",$RepoRoot,"-SessionId",$sid,"-Prompt","killed turn two")
+    $childOut = Join-Path $RunRoot "kill_child_out.txt"
+    $childErr = Join-Path $RunRoot "kill_child_err.txt"
+    $p = Start-Process -FilePath "powershell.exe" -PassThru -WindowStyle Hidden -WorkingDirectory $RepoRoot `
+      -RedirectStandardOutput $childOut -RedirectStandardError $childErr -ArgumentList @(
+      "-NoProfile","-ExecutionPolicy","Bypass","-File",$send,"-RepoRoot",$RepoRoot,"-SessionId",$sid,"-Prompt","killed_turn_two")
     $waitedMs = 0
     while(-not (Test-Path -LiteralPath $sig -PathType Leaf)){
       Start-Sleep -Milliseconds 200; $waitedMs += 200
-      if($p.HasExited){ Die "send child exited before reaching the kill window" }
+      if($p.HasExited){
+        $errText = ""
+        if(Test-Path -LiteralPath $childErr -PathType Leaf){ $errText = (Get-Content -LiteralPath $childErr -Raw -ErrorAction SilentlyContinue) }
+        Die ("send child exited before reaching the kill window :: " + ([string]$errText).Trim())
+      }
       if($waitedMs -ge 25000){ Die "send child never reached the kill window (timeout)" }
     }
     Stop-Process -Id $p.Id -Force
