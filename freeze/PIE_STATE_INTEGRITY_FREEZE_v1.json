@@ -1,10 +1,10 @@
 {
     "schema":  "pie.state.integrity.freeze.v1",
-    "frozen_utc":  "2026-08-12T20:31:39.3076603Z",
-    "git_head":  "325d135f76b7f5959a15162dbfc99668556b7b94",
+    "frozen_utc":  "2026-08-18T02:12:44.3142397Z",
+    "git_head":  "540d728872f4f6dafc0ad25cbd0c095f2ef9f92f",
     "verify":  "PIE_VERIFY_FULL_V1_GREEN",
     "gate_green":  true,
-    "source_clean":  false,
+    "source_clean":  true,
     "sealed_components":  [
                               "B1 schema-migration foundation (version guard + fail-closed)",
                               "B2 atomic-write foundation + run-seal adoption",
