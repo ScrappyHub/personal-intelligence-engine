@@ -52,6 +52,18 @@ are ordered; items within a phase can parallelize.
 
 ## Phase 2 — Durability under faults & time
 
+- **OS-LEVEL KILL INJECTION LANDED 2026-08-12** (deepens B2/B3 from simulated to real crashes):
+  `scripts/_lib_pie_txn_v1.ps1` gained kill-window hooks (`PIE_TXN_KILL_BEFORE_COMMIT` /
+  `PIE_TXN_KILL_AFTER_COMMIT`, no-op unless set). `scripts/_pie_txn_kill_driver_v1.ps1` runs a real
+  transaction; `scripts/_selftest_pie_kill_injection_v1.ps1` launches it as a child, waits until it
+  is blocked at the exact commit transition, `Stop-Process -Force` kills it (no finally/cleanup runs
+  -- a genuine crash), and proves `PIE_TxnRecover` rolls back a pre-commit kill and rolls forward a
+  post-commit kill. Green token `SELFTEST_PIE_KILL_INJECTION_V1_GREEN`, wired into verify-engines as
+  `state:kill_injection`.
+  - REMAINING: extend OS-kill injection to the session-turn append and backup-export transitions,
+    and to power-loss simulation (not just process kill).
+
+
 - **B3. Process-kill and power-loss fault injection** around each multi-file transition (kill
   between file N and N+1; assert atomic recovery or clean fail).
   - FOUNDATION LANDED 2026-08-11: `scripts/_lib_pie_txn_v1.ps1` provides a write-ahead journal

@@ -63,7 +63,9 @@ $gateTargets = @(
   "_lib_pie_txn_v1.ps1",
   "_selftest_pie_txn_v1.ps1",
   "_lib_pie_compaction_v1.ps1",
-  "_selftest_pie_compaction_v1.ps1"
+  "_selftest_pie_compaction_v1.ps1",
+  "_pie_txn_kill_driver_v1.ps1",
+  "_selftest_pie_kill_injection_v1.ps1"
 )
 $gateOk = $true
 foreach($t in $gateTargets){
@@ -167,6 +169,7 @@ Run-Trio "engine:onnx" "_selftest_pie_engine_onnx_v1.ps1" $onnxArgs "SELFTEST_PI
 Run-Trio "state:migrations" "_selftest_pie_migrations_v1.ps1" @() "SELFTEST_PIE_MIGRATIONS_V1_GREEN"
 Run-Trio "state:atomic_write" "_selftest_pie_atomic_write_v1.ps1" @() "SELFTEST_PIE_ATOMIC_WRITE_V1_GREEN"
 Run-Trio "state:transaction" "_selftest_pie_txn_v1.ps1" @() "SELFTEST_PIE_TXN_V1_GREEN"
+Run-Trio "state:kill_injection" "_selftest_pie_kill_injection_v1.ps1" @() "SELFTEST_PIE_KILL_INJECTION_V1_GREEN"
 Run-Trio "context:compaction" "_selftest_pie_compaction_v1.ps1" @() "SELFTEST_PIE_COMPACTION_V1_GREEN"
 
 # --- Aggregate + receipt. ---

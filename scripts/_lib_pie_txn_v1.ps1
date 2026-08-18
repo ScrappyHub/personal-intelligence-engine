@@ -47,9 +47,21 @@ function PIE_TxnApplyDir([string]$TxnDir){
   Remove-Item -LiteralPath $TxnDir -Recurse -Force
 }
 
+# OS-kill injection support: signal readiness at an exact transition, then block so an external
+# harness can Stop-Process -Force here (no finally/cleanup runs -> a true crash). No-op unless the
+# matching env var is set, so normal operation is byte-identical.
+function PIE_TxnKillWindow($Txn,[string]$Point){
+  $sig = $env:PIE_TXN_KILL_SIGNAL
+  if([string]::IsNullOrWhiteSpace($sig)){ $sig = Join-Path $Txn.root "runs\txn_kill_ready.txt" }
+  PIE_WriteFileAtomic $sig ($Txn.id + "|" + $Point)
+  Start-Sleep -Seconds 30
+}
+
 function PIE_TxnCommit($Txn){
   PIE_TxnWriteJournal $Txn
+  if($env:PIE_TXN_KILL_BEFORE_COMMIT -eq "1"){ PIE_TxnKillWindow $Txn "before_commit" }
   PIE_WriteFileAtomic (Join-Path $Txn.dir "COMMIT") $Txn.id   # atomic commit point
+  if($env:PIE_TXN_KILL_AFTER_COMMIT -eq "1"){ PIE_TxnKillWindow $Txn "after_commit" }
   PIE_TxnApplyDir $Txn.dir
 }
 
