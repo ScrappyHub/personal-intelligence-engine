@@ -3,6 +3,7 @@ param(
   [Parameter(Mandatory=$true)][string]$Model,
   [Parameter(Mandatory=$false)][string]$Message = "",
   [Parameter(Mandatory=$false)][string]$MessagePath = "",
+  [Parameter(Mandatory=$false)][string]$PromptPath = "",
   [Parameter(Mandatory=$false)][int]$MaxNewTokens = 512
 )
 
@@ -16,17 +17,25 @@ $ErrorActionPreference = "Stop"
 . (Join-Path $RepoRoot 'scripts\_lib_pie_v1.ps1')
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 
-if(-not [string]::IsNullOrWhiteSpace($MessagePath)){
+if(-not [string]::IsNullOrWhiteSpace($PromptPath)){
+  if(-not (Test-Path -LiteralPath $PromptPath -PathType Leaf)){
+    throw ("PIE_ONNX_PROMPT_PATH_NOT_FOUND: " + $PromptPath)
+  }
+  $Prompt = Get-Content -LiteralPath $PromptPath -Raw
+}
+elseif(-not [string]::IsNullOrWhiteSpace($MessagePath)){
   if(-not (Test-Path -LiteralPath $MessagePath -PathType Leaf)){
     throw ("PIE_ONNX_MESSAGE_PATH_NOT_FOUND: " + $MessagePath)
   }
   $Message = Get-Content -LiteralPath $MessagePath -Raw
 }
-if([string]::IsNullOrWhiteSpace($Message)){ throw "PIE_ONNX_MESSAGE_REQUIRED" }
+if([string]::IsNullOrWhiteSpace($PromptPath) -and [string]::IsNullOrWhiteSpace($Message)){ throw "PIE_ONNX_MESSAGE_REQUIRED" }
 
-. (Join-Path $PSScriptRoot "_lib_pie_persona_v1.ps1")
-$System = PIE_PersonaSystem "ONNX"
-$Prompt = $System + "`n`n" + $Message.Replace("\n","`n")
+if([string]::IsNullOrWhiteSpace($PromptPath)){
+  . (Join-Path $PSScriptRoot "_lib_pie_persona_v1.ps1")
+  $System = PIE_PersonaSystem "ONNX"
+  $Prompt = $System + "`n`n" + $Message.Replace("\n","`n")
+}
 
 # --- Resolve the ONNX model directory (fail-closed, deterministic order). ---
 $ModelDir = ""
@@ -68,7 +77,8 @@ if(-not (Test-Path -LiteralPath $helper -PathType Leaf)){ throw ("PIE_ENGINE_BAC
 
 # Pass the prompt via a temp file to avoid argument-length and quoting issues.
 $tmp = Join-Path $RepoRoot ('runs\onnx_prompt_' + ([guid]::NewGuid().ToString('n')) + '.txt')
-NL_WriteUtf8NoBomLf $tmp $Prompt
+$promptEnc = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($tmp,$Prompt,$promptEnc)
 try {
   $out = & $python $helper --model-dir $ModelDir --prompt-file $tmp --max-new-tokens $MaxNewTokens 2>&1 | Out-String
   $code = $LASTEXITCODE

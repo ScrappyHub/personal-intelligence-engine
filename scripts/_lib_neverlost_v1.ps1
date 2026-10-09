@@ -37,7 +37,10 @@ function NL_ReadUtf8([string]$Path){ if(-not (Test-Path -LiteralPath $Path -Path
 function NL_Sha256HexBytes([byte[]]$b){ if($null -eq $b){$b=@()} $sha=[System.Security.Cryptography.SHA256]::Create(); try{$h=$sha.ComputeHash([byte[]]$b)} finally{$sha.Dispose()} $sb=New-Object System.Text.StringBuilder; foreach($x in $h){[void]$sb.Append($x.ToString("x2"))}; $sb.ToString() }
 function NL_ToCanonJson($v){
   if ($null -eq $v) { return 'null' }
-  if ($v -is [bool]) { return (if($v){'true'}else{'false'}) }
+  if ($v -is [bool]) {
+    if($v){ return 'true' }
+    return 'false'
+  }
   if ($v -is [int] -or $v -is [long] -or $v -is [double] -or $v -is [decimal]) {
     return ([string]$v).ToLowerInvariant()
   }

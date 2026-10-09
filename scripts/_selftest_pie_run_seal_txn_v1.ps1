@@ -48,12 +48,18 @@ if($rec.schema -ne "run_record.v1"){ Die ("unexpected schema: " + $rec.schema) }
 
 $inPath  = Join-Path $RepoRoot ("runs\run_" + $runId + "_input.txt")
 $outPath = Join-Path $RepoRoot ("runs\run_" + $runId + "_output.txt")
+$recordPath = Join-Path $RepoRoot ("runs\run_" + $runId + "_record.json")
+$provenancePath = Join-Path $RepoRoot ("runs\run_" + $runId + "_provenance.json")
 if(-not (Test-Path -LiteralPath $inPath -PathType Leaf)){ Die "input artifact missing" }
 if(-not (Test-Path -LiteralPath $outPath -PathType Leaf)){ Die "output artifact missing" }
+if(-not (Test-Path -LiteralPath $recordPath -PathType Leaf)){ Die "record artifact missing" }
+if(-not (Test-Path -LiteralPath $provenancePath -PathType Leaf)){ Die "provenance artifact missing" }
 $inTxt  = [System.IO.File]::ReadAllText($inPath,$enc)
 $outTxt = [System.IO.File]::ReadAllText($outPath,$enc)
 if($inTxt -notmatch [regex]::Escape($marker)){ Die "input artifact content wrong" }
 if($outTxt -notmatch 'PIE_STUB_OUTPUT'){ Die "output artifact content wrong" }
+$provenance = [System.IO.File]::ReadAllText($provenancePath,$enc) | ConvertFrom-Json
+if([string]$provenance.run_id -ne $runId -or [string]$provenance.schema -ne 'pie.run.provenance.v1'){ Die "provenance binding wrong" }
 
 # No orphan transaction directory left behind (commit fully applied + cleaned up).
 if((TxnDirCount) -ne 0){ Die "orphan txn dir left after commit" }

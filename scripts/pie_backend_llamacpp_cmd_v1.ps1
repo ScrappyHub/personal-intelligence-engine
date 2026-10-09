@@ -2,6 +2,7 @@ param(
   [Parameter(Mandatory=$true)][string]$Model,
   [Parameter(Mandatory=$false)][string]$Message = "",
   [Parameter(Mandatory=$false)][string]$MessagePath = "",
+  [Parameter(Mandatory=$false)][string]$PromptPath = "",
   [Parameter(Mandatory=$false)][int]$NPredict = 512
 )
 
@@ -12,21 +13,28 @@ $ErrorActionPreference = "Stop"
 # Mirrors scripts\pie_backend_ollama_cmd_v1.ps1. Output-bytes only; the recording law
 # (hashing, ledger, artifacts, sealed-model binding) is owned by scripts\pie_run_v1.ps1.
 
-if(-not [string]::IsNullOrWhiteSpace($MessagePath)){
+if(-not [string]::IsNullOrWhiteSpace($PromptPath)){
+  if(-not (Test-Path -LiteralPath $PromptPath -PathType Leaf)){
+    throw ("PIE_LLAMACPP_PROMPT_PATH_NOT_FOUND: " + $PromptPath)
+  }
+  $Prompt = Get-Content -LiteralPath $PromptPath -Raw
+}
+elseif(-not [string]::IsNullOrWhiteSpace($MessagePath)){
   if(-not (Test-Path -LiteralPath $MessagePath -PathType Leaf)){
     throw ("PIE_LLAMACPP_MESSAGE_PATH_NOT_FOUND: " + $MessagePath)
   }
   $Message = Get-Content -LiteralPath $MessagePath -Raw
 }
 
-if([string]::IsNullOrWhiteSpace($Message)){
+if([string]::IsNullOrWhiteSpace($PromptPath) -and [string]::IsNullOrWhiteSpace($Message)){
   throw "PIE_LLAMACPP_MESSAGE_REQUIRED"
 }
 
-. (Join-Path $PSScriptRoot "_lib_pie_persona_v1.ps1")
-$System = PIE_PersonaSystem "llama.cpp"
-
-$Prompt = $System + "`n`n" + $Message.Replace("\n","`n")
+if([string]::IsNullOrWhiteSpace($PromptPath)){
+  . (Join-Path $PSScriptRoot "_lib_pie_persona_v1.ps1")
+  $System = PIE_PersonaSystem "llama.cpp"
+  $Prompt = $System + "`n`n" + $Message.Replace("\n","`n")
+}
 
 $Url = $env:PIE_LLAMACPP_URL
 if([string]::IsNullOrWhiteSpace($Url)){ $Url = "http://127.0.0.1:8080/completion" }

@@ -14,38 +14,49 @@ $enc = New-Object System.Text.UTF8Encoding($false)
 
 Write-Host "PIE_STATE_INTEGRITY_FREEZE_START" -ForegroundColor DarkCyan
 
-# 1. Prove green.
-$gateGreen = $false
+# A freeze is a release claim. A skipped release gate cannot create one.
 if($SkipVerify){
-  Write-Host "  (verify skipped by request; freeze will record verify=skipped)" -ForegroundColor Yellow
-}
-else {
-  $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
-  try {
-    $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "scripts\_RUN_pie_verify_full_v1.ps1") -RepoRoot $RepoRoot 2>&1 | Out-String
-    $code = $LASTEXITCODE
-  }
-  finally { $ErrorActionPreference = $prev }
-  if($code -ne 0 -or ($out -notmatch 'PIE_VERIFY_FULL_V1_GREEN')){
-    throw "PIE_STATE_INTEGRITY_FREEZE_BLOCKED: verify-full is not green; refusing to seal"
-  }
-  $gateGreen = $true
-  Write-Host "  gate: PIE_VERIFY_FULL_V1_GREEN" -ForegroundColor Green
+  throw "PIE_STATE_INTEGRITY_FREEZE_BLOCKED: -SkipVerify cannot create a valid freeze"
 }
 
-# 2. Capture committed HEAD + working-tree cleanliness (source-tracked files only).
+# 1. Capture committed HEAD and require a clean source tree. Generated evidence and mutable runtime
+# state are excluded; untracked scripts, schemas, docs, workbench, and desktop files are not.
 $head = (& git -C $RepoRoot rev-parse HEAD 2>$null)
-if([string]::IsNullOrWhiteSpace($head)){ $head = "unknown" }
-$dirtyTracked = @(& git -C $RepoRoot status --porcelain --untracked-files=no 2>$null | Where-Object { $_ -notmatch 'proofs/|test_vectors/|runs/' })
+if([string]::IsNullOrWhiteSpace($head)){ throw "PIE_STATE_INTEGRITY_FREEZE_BLOCKED: git HEAD unavailable" }
+$statusLines = @(& git -C $RepoRoot status --porcelain --untracked-files=all 2>$null)
+$dirtySource = New-Object System.Collections.Generic.List[string]
+foreach($statusLine in $statusLines){
+  if([string]::IsNullOrWhiteSpace($statusLine)){ continue }
+  $pathPart = $(if($statusLine.Length -gt 3){$statusLine.Substring(3).Replace('\','/')}else{$statusLine})
+  $generated = ($pathPart -match '^(proofs|test_vectors|runs)/') -or ($pathPart -eq 'memory/.memory.lock')
+  if(-not $generated){ [void]$dirtySource.Add($statusLine) }
+}
+if($dirtySource.Count -gt 0){
+  throw ("PIE_STATE_INTEGRITY_FREEZE_BLOCKED: source tree is dirty, including untracked source:`n" + ($dirtySource.ToArray() -join "`n"))
+}
+
+# 2. Prove green.
+$gateGreen = $false
+$prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+try {
+  $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "scripts\_RUN_pie_verify_full_v1.ps1") -RepoRoot $RepoRoot 2>&1 | Out-String
+  $code = $LASTEXITCODE
+}
+finally { $ErrorActionPreference = $prev }
+if($code -ne 0 -or ($out -notmatch 'PIE_VERIFY_FULL_V1_GREEN')){
+  throw "PIE_STATE_INTEGRITY_FREEZE_BLOCKED: verify-full is not green; refusing to seal"
+}
+$gateGreen = $true
+Write-Host "  gate: PIE_VERIFY_FULL_V1_GREEN" -ForegroundColor Green
 
 # 3. Build + write the freeze manifest (canonical, sorted-key compact) + a sha256 sidecar.
 $manifest = [ordered]@{
   schema            = "pie.state.integrity.freeze.v1"
   frozen_utc        = (Get-Date).ToUniversalTime().ToString("o")
   git_head          = [string]$head
-  verify            = $(if($SkipVerify){"skipped"}else{"PIE_VERIFY_FULL_V1_GREEN"})
+  verify            = "PIE_VERIFY_FULL_V1_GREEN"
   gate_green        = $gateGreen
-  source_clean      = ($dirtyTracked.Count -eq 0)
+  source_clean      = $true
   sealed_components = @(
     "B1 schema-migration foundation (version guard + fail-closed)",
     "B2 atomic-write foundation + run-seal adoption",
@@ -86,5 +97,4 @@ finally { $hash.Dispose() }
 
 Write-Host ("  git_head: " + $head) -ForegroundColor Cyan
 Write-Host ("  freeze_sha256: sha256:" + $digest) -ForegroundColor Cyan
-if($dirtyTracked.Count -gt 0){ Write-Host ("  NOTE: " + $dirtyTracked.Count + " tracked source file(s) uncommitted at freeze time") -ForegroundColor Yellow }
 Write-Host "PIE_STATE_INTEGRITY_FREEZE_SEALED" -ForegroundColor Green

@@ -12,4 +12,8 @@ foreach($Id in @("cli","memory","models","runtime","conversations","workbench","
 }
 $FailedRequired = @($Report.components | Where-Object { $_.required -and $_.status -eq "failed" })
 if($FailedRequired.Count){ throw "PIE_DOCTOR_SELFTEST_REQUIRED_FAILURE" }
+$Desktop = @($Report.components | Where-Object { [string]$_.id -eq "desktop" }) | Select-Object -First 1
+if($null -eq $Desktop -or $null -eq $Desktop.details.release_verified -or $null -eq $Desktop.details.release_signed){ throw "PIE_DOCTOR_SELFTEST_DESKTOP_RELEASE_STATE_MISSING" }
+$DesktopReceipt = Join-Path $RepoRoot "desktop\release\make\squirrel.windows\x64\PIE_DESKTOP_RELEASE.json"
+if((Test-Path -LiteralPath $DesktopReceipt -PathType Leaf) -and $Desktop.details.release_verified -ne $true){ throw "PIE_DOCTOR_SELFTEST_DESKTOP_RECEIPT_NOT_RECOGNIZED" }
 Write-Host "PIE_DOCTOR_SELFTEST_OK" -ForegroundColor Green

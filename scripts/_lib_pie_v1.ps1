@@ -7,6 +7,25 @@ function PIE_Sha256HexFile([string]$Path){ if(-not (Test-Path -LiteralPath $Path
 function PIE_RegistryRoot([string]$RepoRoot){ Join-Path $RepoRoot "registry\models" }
 function PIE_ModelManifestPath([string]$RepoRoot,[string]$ModelId){ $safe = ([string]$ModelId).Replace(':','_'); Join-Path (PIE_RegistryRoot $RepoRoot) (Join-Path $safe "model_manifest.v1.json") }
 function PIE_RunLedgerPath([string]$RepoRoot){ Join-Path $RepoRoot "runs\run_ledger.ndjson" }
+function PIE_AcquireRunLedgerLock {
+  param(
+    [Parameter(Mandatory=$true)][string]$RepoRoot,
+    [Parameter(Mandatory=$false)][ValidateRange(100,300000)][int]$TimeoutMilliseconds = 30000
+  )
+  $runsDir = Join-Path $RepoRoot "runs"
+  if(-not (Test-Path -LiteralPath $runsDir -PathType Container)){ New-Item -ItemType Directory -Path $runsDir -Force | Out-Null }
+  $lockPath = Join-Path $runsDir "run_ledger.lock"
+  $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMilliseconds)
+  do {
+    try {
+      return [System.IO.File]::Open($lockPath,[System.IO.FileMode]::OpenOrCreate,[System.IO.FileAccess]::ReadWrite,[System.IO.FileShare]::None)
+    }
+    catch [System.IO.IOException] {
+      if([DateTime]::UtcNow -ge $deadline){ throw ("PIE_RUN_LEDGER_LOCK_TIMEOUT: " + $lockPath) }
+      Start-Sleep -Milliseconds 50
+    }
+  } while($true)
+}
 function PIE_AppendRunLedger([string]$RepoRoot,[hashtable]$run){ $p=PIE_RunLedgerPath $RepoRoot; $enc=New-Object System.Text.UTF8Encoding($false); $prev=""; if(Test-Path -LiteralPath $p -PathType Leaf){ $lines=@(@([System.IO.File]::ReadAllLines($p,$enc))); if($lines.Count -gt 0){ $prev=$lines[$lines.Count-1] } } if(-not [string]::IsNullOrWhiteSpace($prev)){ $run.prev_hash = PIE_Sha256HexBytes ([System.Text.Encoding]::UTF8.GetBytes($prev)) } $line=NL_ToCanonJson $run; [System.IO.File]::AppendAllText($p, ($line + "`n"), $enc); NL_AppendReceipt $RepoRoot "pie_run_ledger" "appended run ledger entry" @{ run_id=$run.run_id; line_sha256=(PIE_Sha256HexBytes([System.Text.Encoding]::UTF8.GetBytes($line))) }; $line }
 # Compute the next ledger line (with identical prev_hash chaining) WITHOUT writing, so the caller
 # can apply it transactionally. Returns { line; existing; path }.

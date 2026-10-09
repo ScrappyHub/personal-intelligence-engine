@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference="Stop"
 Set-StrictMode -Version Latest
 function Die([string]$m){ throw $m }
-$RepoRoot = $RepoRoot.TrimEnd("\")
+$RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path.TrimEnd("\")
 . (Join-Path $RepoRoot "scripts\_lib_neverlost_v1.ps1")
 
 function Sha256HexBytes([byte[]]$b){ if ($null -eq $b) { $b=@() }; $sha=[System.Security.Cryptography.SHA256]::Create(); try{$h=$sha.ComputeHash([byte[]]$b)}finally{$sha.Dispose()}; $sb=New-Object System.Text.StringBuilder; for($i=0;$i -lt $h.Length;$i++){[void]$sb.Append($h[$i].ToString("x2"))}; return $sb.ToString() }
@@ -111,11 +111,17 @@ Write-Utf8NoBomLf $sumsPath (($sumLines.ToArray() -join "`n"))
 $final = Join-Path $outbox $packetId
 if (Test-Path -LiteralPath $final -PathType Container) { Remove-Item -LiteralPath $final -Recurse -Force }
 Move-Item -LiteralPath $tmp -Destination $final
-$msg = "OK: run packet built: " + $packetId + " run_id=" + $RunId + " " + $final
+
+# A packet is not reported as built until a fresh verifier independently checks its outer hashes,
+# embedded run seal, provenance bindings, and optional signature.
+$verifier = Join-Path $RepoRoot 'scripts\pie_run_packet_verify_v1.ps1'
+$verifyArgs = @('-RepoRoot',$RepoRoot,'-PacketRoot',$final)
+if($Sign){ $verifyArgs += '-RequireSig' }
+$verifyOutput = & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $verifier @verifyArgs 2>&1 | Out-String
+if($LASTEXITCODE -ne 0 -or $verifyOutput -notmatch 'PIE_RUN_PACKET_VERIFY_VALID'){
+  Die ('built_run_packet_failed_verification: ' + $verifyOutput.Trim())
+}
+
+$msg = "OK: run packet built and verified: " + $packetId + " run_id=" + $RunId + " " + $final
 Write-Host $msg -ForegroundColor Green
 Write-Output $msg
-
-# --- PIE_PATCH_PIPELINE_OKLINE_V1 ---
-$msg = ("OK: run packet built: " + $packetId + " run_id=" + $RunId + " " + $final)
-Write-Output $msg
-# --- END PIE_PATCH_PIPELINE_OKLINE_V1 ---

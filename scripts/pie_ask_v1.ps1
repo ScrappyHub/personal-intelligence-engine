@@ -1,7 +1,8 @@
 param(
   [Parameter(Mandatory=$true)][string]$RepoRoot,
   [Parameter(Mandatory=$true)][string]$SessionId,
-  [Parameter(Mandatory=$true)][string]$Message,
+  [Parameter(Mandatory=$false)][string]$Message = "",
+  [Parameter(Mandatory=$false)][switch]$MessageStdin,
   [Parameter(Mandatory=$false)][ValidateRange(1,86400)][int]$TimeoutSeconds = 180,
   [Parameter(Mandatory=$false)][ValidateRange(1,3)][int]$MaxAttempts = 2,
   [Parameter(Mandatory=$false)][ValidateRange(1,300)][int]$ProgressIntervalSeconds = 5
@@ -11,6 +12,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
+if($MessageStdin){ $Message = ([Console]::In.ReadToEnd()).TrimEnd("`r","`n") }
+if([string]::IsNullOrWhiteSpace($Message)){ throw "PIE_ASK_MESSAGE_REQUIRED" }
 . (Join-Path $RepoRoot "scripts\_lib_pie_agent_session_v1.ps1")
 [void](PIE_GetAgentSession -RepoRoot $RepoRoot -SessionId $SessionId -RequireRunning -RequireIntegrity)
 $RunRoot = Join-Path $RepoRoot ("runs\" + $SessionId)

@@ -254,6 +254,30 @@ function parseSessionIndex(output) {
 }
 
 async function readState(sessionId) {
+  if (allowMock) {
+    const registryPath = path.join(repoRoot, 'models', 'PIE_MODEL_REGISTRY.v1.json');
+    const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8').replace(/^\uFEFF/, ''));
+    if (registry.schema !== 'pie.model.registry.v1' || !Array.isArray(registry.catalog)) {
+      throw Object.assign(new Error('PIE_WORKBENCH_MODEL_REGISTRY_INVALID'), { status: 500 });
+    }
+    let session = null;
+    if (sessionId) {
+      try { session = parseSession(await runPie(['agent', 'status', '-SessionId', sessionId], 30000)); }
+      catch (error) {
+        if (!String(error.message).includes('PIE_AGENT_SESSION_NOT_FOUND')) throw error;
+      }
+    }
+    return {
+      schema: 'pie.workbench.state.v1',
+      runtime: { installed: true, running: true, selectedModel: 'workbench-mock:latest', loadedModels: ['workbench-mock:latest'] },
+      models: { models: [], selected: 'workbench-mock:latest', catalog: registry.catalog },
+      integrations: {},
+      haai: localHaaiState(),
+      session,
+      download: activeModelPullJobId && modelPullJobs.has(activeModelPullJobId) ? publicDownloadJob(modelPullJobs.get(activeModelPullJobId)) : null,
+      system: storageState(),
+    };
+  }
   const [runtimeOutput, modelsOutput, catalogOutput, integrationsOutput] = await Promise.all([
     runPie(['runtime', 'status'], 30000),
     runPie(['models', 'list'], 30000),
@@ -403,7 +427,9 @@ async function handleApi(req, res, url) {
     const backend = allowMock && body.backend === 'mock' ? 'mock' : 'ollama';
     const model = typeof body.model === 'string' && body.model.trim() ? body.model.trim() : 'qwen2.5-coder:7b';
     const goal = typeof body.goal === 'string' ? body.goal.trim().slice(0, 500) : '';
-    const output = await runPie(['agent', 'start', '-SessionId', body.sessionId, '-TargetRepo', targetRepo, '-Goal', goal, '-Backend', backend, '-Model', model], 30000);
+    const startArgs = ['agent', 'start', '-SessionId', body.sessionId, '-TargetRepo', targetRepo, '-Backend', backend, '-Model', model];
+    if (goal) startArgs.push('-GoalStdin');
+    const output = await runPie(startArgs, 30000, null, goal || null);
     send(res, 200, { ok: true, output, session: parseSession(await runPie(['agent', 'status', '-SessionId', body.sessionId], 30000)) });
     return;
   }
@@ -487,7 +513,7 @@ async function handleApi(req, res, url) {
     sessionLocks.add(body.sessionId);
     try {
       const timeout = Math.min(Math.max(Number.parseInt(body.timeoutSeconds || '180', 10), 30), 600);
-      const output = await runPie(['agent', 'ask', '-SessionId', body.sessionId, '-Text', body.text.trim(), '-TimeoutSeconds', String(timeout), '-Retries', '1'], (timeout * 2 + 30) * 1000);
+      const output = await runPie(['agent', 'ask', '-SessionId', body.sessionId, '-TextStdin', '-TimeoutSeconds', String(timeout), '-Retries', '1'], (timeout * 2 + 30) * 1000, null, body.text.trim());
       send(res, 200, { ok: true, answer: answerFromOutput(output), output });
     } finally {
       sessionLocks.delete(body.sessionId);

@@ -80,7 +80,7 @@ if(Test-Path -LiteralPath $RunsRoot -PathType Container){
 $ConversationAttention = $SessionCounts.corrupt -gt 0 -or $SessionCounts.legacy -gt 0 -or $SessionCounts.busy -gt 0
 Add-Component "conversations" $(if($ConversationAttention){"attention"}else{"ready"}) $true $(if($ConversationAttention){"Verified conversations are isolated; legacy, busy, or blocked development sessions need review."}else{"Conversation bindings and histories are readable."}) $SessionCounts
 
-$WorkbenchFiles = @("workbench\server.js","workbench\public\index.html","workbench\public\app.js","workbench\public\styles.css","workbench\contracts\PIE_WORKBENCH_HTTP.v1.json")
+$WorkbenchFiles = @("workbench\package.json","workbench\server.js","workbench\public\index.html","workbench\public\app.js","workbench\public\styles.css","workbench\contracts\PIE_WORKBENCH_HTTP.v1.json")
 $WorkbenchMissing = @($WorkbenchFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $RepoRoot $_) -PathType Leaf) })
 try { if(-not $WorkbenchMissing.Count){ $null = Read-JsonFile -Path (Join-Path $RepoRoot "workbench\contracts\PIE_WORKBENCH_HTTP.v1.json") } }
 catch { $WorkbenchMissing += "invalid HTTP contract" }
@@ -96,7 +96,49 @@ try {
 $DesktopFiles = @("desktop\package.json","desktop\main.js","desktop\preload.js","desktop\runtime-workspace.js","desktop\forge.config.js")
 $DesktopMissing = @($DesktopFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $RepoRoot $_) -PathType Leaf) })
 $ElectronInstalled = Test-Path -LiteralPath (Join-Path $RepoRoot "desktop\node_modules\electron") -PathType Container
-Add-Component "desktop" $(if($DesktopMissing.Count){"failed"}else{"attention"}) $true $(if($DesktopMissing.Count){"Desktop application source is incomplete."}elseif($ElectronInstalled){"Desktop development runtime is present; release gates remain open."}else{"Desktop source is present; dependencies and release verification remain outstanding."}) @{missing=$DesktopMissing;dependencies_installed=$ElectronInstalled;release_verified=$false}
+$DesktopMakeRoot = Join-Path $RepoRoot "desktop\release\make\squirrel.windows\x64"
+$DesktopReceiptPath = Join-Path $DesktopMakeRoot "PIE_DESKTOP_RELEASE.json"
+$DesktopSetupPath = Join-Path $DesktopMakeRoot "PIE-Setup.exe"
+$DesktopNugetPath = Join-Path $DesktopMakeRoot "pie_desktop-0.1.0-full.nupkg"
+$DesktopExecutablePath = Join-Path $RepoRoot "desktop\release\PIE-win32-x64\PIE.exe"
+$DesktopManifestPath = Join-Path $RepoRoot "desktop\release\PIE-win32-x64\resources\runtime\PIE_RELEASE_MANIFEST.json"
+$DesktopReleaseVerified = $false
+$DesktopReleaseSigned = $false
+$DesktopReleaseError = ""
+if(Test-Path -LiteralPath $DesktopReceiptPath -PathType Leaf){
+  try {
+    $DesktopReceipt = Read-JsonFile -Path $DesktopReceiptPath
+    $ExpectedReleaseFiles = @($DesktopSetupPath,$DesktopNugetPath,$DesktopExecutablePath,$DesktopManifestPath)
+    foreach($ExpectedReleaseFile in $ExpectedReleaseFiles){
+      if(-not (Test-Path -LiteralPath $ExpectedReleaseFile -PathType Leaf)){ throw ("release file missing: " + $ExpectedReleaseFile) }
+    }
+    if([string]$DesktopReceipt.schema -ne "pie.desktop.release.receipt.v1" -or [string]$DesktopReceipt.status -ne "ok"){ throw "release receipt schema or status is invalid" }
+    if([IO.Path]::GetFullPath([string]$DesktopReceipt.setup.path) -ne [IO.Path]::GetFullPath($DesktopSetupPath)){ throw "release receipt setup path mismatch" }
+    if([IO.Path]::GetFullPath([string]$DesktopReceipt.executable.path) -ne [IO.Path]::GetFullPath($DesktopExecutablePath)){ throw "release receipt executable path mismatch" }
+    if([IO.Path]::GetFullPath([string]$DesktopReceipt.nuget.path) -ne [IO.Path]::GetFullPath($DesktopNugetPath)){ throw "release receipt package path mismatch" }
+    if((Get-FileHash -LiteralPath $DesktopSetupPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne ([string]$DesktopReceipt.setup.sha256).ToLowerInvariant()){ throw "release setup hash mismatch" }
+    if((Get-FileHash -LiteralPath $DesktopExecutablePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne ([string]$DesktopReceipt.executable.sha256).ToLowerInvariant()){ throw "release executable hash mismatch" }
+    if((Get-FileHash -LiteralPath $DesktopNugetPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne ([string]$DesktopReceipt.nuget.sha256).ToLowerInvariant()){ throw "release package hash mismatch" }
+    if((Get-FileHash -LiteralPath $DesktopManifestPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne ([string]$DesktopReceipt.runtime_manifest_sha256).ToLowerInvariant()){ throw "release runtime manifest hash mismatch" }
+    $DesktopReleaseVerified = $true
+    $DesktopReleaseSigned = [string]$DesktopReceipt.setup.signature -eq "Valid" -and [string]$DesktopReceipt.executable.signature -eq "Valid" -and $DesktopReceipt.unsigned_development_release -eq $false
+  } catch {
+    $DesktopReleaseError = $_.Exception.Message
+  }
+}
+$DesktopStatus = if($DesktopMissing.Count){"failed"}else{"attention"}
+$DesktopSummary = if($DesktopMissing.Count){
+  "Desktop application source is incomplete."
+} elseif($DesktopReleaseVerified -and $DesktopReleaseSigned){
+  "A verified and signed desktop installer is present; remaining product release gates are open."
+} elseif($DesktopReleaseVerified){
+  "A verified unsigned desktop installer is present; signing and remaining product release gates are open."
+} elseif($ElectronInstalled){
+  "Desktop development runtime is present; installer verification and release gates remain open."
+} else {
+  "Desktop source is present; dependencies and release verification remain outstanding."
+}
+Add-Component "desktop" $DesktopStatus $true $DesktopSummary @{missing=$DesktopMissing;dependencies_installed=$ElectronInstalled;release_verified=$DesktopReleaseVerified;release_signed=$DesktopReleaseSigned;release_receipt=$DesktopReceiptPath;release_error=$DesktopReleaseError}
 
 $HostedContract = Join-Path $RepoRoot "workbench\contracts\PIE_HOSTED_GATEWAY.v1.json"
 try {

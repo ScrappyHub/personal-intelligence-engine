@@ -24,8 +24,12 @@ function logDesktop(message, details = '') {
   }
 }
 
-function completeSmokeTest(reason) {
+function completeSmokeTest(reason, visibilityAttempt = 0) {
   if (!smokeTest || smokeReceiptWritten || !mainWindow || mainWindow.isDestroyed()) return;
+  if (!mainWindow.isVisible() && visibilityAttempt < 20) {
+    setTimeout(() => completeSmokeTest(reason, visibilityAttempt + 1), 50).unref();
+    return;
+  }
   const nativeHandle = mainWindow.getNativeWindowHandle().toString('hex');
   const receipt = {
     schema: 'pie.desktop.smoke.v1',

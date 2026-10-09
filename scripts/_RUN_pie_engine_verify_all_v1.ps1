@@ -3,6 +3,7 @@ param(
   [Parameter(Mandatory=$false)][string]$OllamaModel = "",
   [Parameter(Mandatory=$false)][string]$LlamaCppModel = "",
   [Parameter(Mandatory=$false)][string]$OnnxModelDir = "",
+  [Parameter(Mandatory=$false)][ValidateSet('ollama','llamacpp','onnx')][string[]]$RequiredEngines = @('ollama'),
   [switch]$IncludeTier0
 )
 
@@ -15,8 +16,9 @@ $ErrorActionPreference = "Stop"
 #   3. Frozen Tier-0 green pipeline (optional -IncludeTier0) to prove the default stub path is intact.
 #   4. The three engine certification trios (ollama, llama.cpp, onnx).
 # Writes an aggregate receipt to runs\engine_verify\<ts>.json (+ latest.json). Emits
-# PIE_ENGINE_VERIFY_ALL_V1_GREEN only when every executed check passed and no positive check
-# regressed. Positive checks are INCONCLUSIVE (not failures) when their backend/model is absent.
+# PIE_ENGINE_VERIFY_ALL_V1_GREEN only when every check passed and every required engine completed
+# its positive real-generation check. Optional engines may be INCONCLUSIVE when unavailable, but a
+# required engine can never be skipped into a green result.
 #
 # Authored, not yet executed on Windows. Run:
 #   .\scripts\_RUN_pie_engine_verify_all_v1.ps1 -RepoRoot . -IncludeTier0 `
@@ -25,10 +27,21 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 $Scripts  = Join-Path $RepoRoot "scripts"
 $results  = New-Object System.Collections.Generic.List[object]
-function Add-Result([string]$id,[string]$status,[string]$detail){
-  $results.Add([ordered]@{ id=$id; status=$status; detail=$detail })
+$requiredEngineSet = @{}
+foreach($requiredEngine in @($RequiredEngines)){
+  $requiredEngineSet[[string]$requiredEngine.ToLowerInvariant()] = $true
+}
+function Add-Result {
+  param(
+    [Parameter(Mandatory=$true)][string]$id,
+    [Parameter(Mandatory=$true)][string]$status,
+    [Parameter(Mandatory=$false)][string]$detail = "",
+    [Parameter(Mandatory=$false)][bool]$required = $true
+  )
+  $results.Add([ordered]@{ id=$id; status=$status; required=$required; detail=$detail })
   $color = switch($status){ "pass"{"Green"} "fail"{"Red"} "inconclusive"{"Yellow"} default{"Gray"} }
-  Write-Host ("  [" + $status.ToUpperInvariant() + "] " + $id + $(if($detail){" :: " + $detail}else{""})) -ForegroundColor $color
+  $requirement = $(if($required){"required"}else{"optional"})
+  Write-Host ("  [" + $status.ToUpperInvariant() + "] " + $id + " (" + $requirement + ")" + $(if($detail){" :: " + $detail}else{""})) -ForegroundColor $color
 }
 
 # Run a child powershell.exe with stderr merged and the terminating-error preference relaxed, so a
@@ -52,6 +65,10 @@ $gateTargets = @(
   "pie_backend_ollama_cmd_v1.ps1",
   "pie_backend_llamacpp_cmd_v1.ps1",
   "pie_backend_onnx_cmd_v1.ps1",
+  "pie_run_seal_v1.ps1",
+  "pie_run_verify_v1.ps1",
+  "pie_run_packet_build_v1.ps1",
+  "pie_run_packet_verify_v1.ps1",
   "_lib_pie_persona_v1.ps1",
   "_selftest_pie_engine_ollama_v1.ps1",
   "_selftest_pie_engine_llamacpp_v1.ps1",
@@ -66,7 +83,10 @@ $gateTargets = @(
   "_selftest_pie_compaction_v1.ps1",
   "_pie_txn_kill_driver_v1.ps1",
   "_selftest_pie_kill_injection_v1.ps1",
-  "_selftest_pie_session_kill_injection_v1.ps1"
+  "_selftest_pie_session_kill_injection_v1.ps1",
+  "_selftest_pie_run_seal_txn_v1.ps1",
+  "_selftest_pie_run_provenance_v1.ps1",
+  "_selftest_pie_run_ledger_concurrency_v1.ps1"
 )
 $gateOk = $true
 foreach($t in $gateTargets){
@@ -138,33 +158,33 @@ if($IncludeTier0){
     else { Add-Result "tier0" "fail" "tier0 did not report FULL_GREEN" }
   } else { Add-Result "tier0" "fail" "runner missing" }
 } else {
-  Add-Result "tier0" "inconclusive" "skipped (pass -IncludeTier0 to run)"
+  Add-Result "tier0" "inconclusive" "skipped (pass -IncludeTier0 to run)" $false
 }
 
 # --- 4. Engine certification trios. ---
-function Run-Trio([string]$id,[string]$script,[string[]]$extraArgs,[string]$greenToken){
+function Run-Trio([string]$id,[string]$script,[string[]]$extraArgs,[string]$greenToken,[bool]$required=$true){
   $p = Join-Path $Scripts $script
-  if(-not (Test-Path -LiteralPath $p -PathType Leaf)){ Add-Result $id "fail" "missing"; return }
+  if(-not (Test-Path -LiteralPath $p -PathType Leaf)){ Add-Result $id "fail" "missing" $required; return }
   $callArgs = @("-RepoRoot",$RepoRoot) + $extraArgs
   $out = Invoke-Child $p $callArgs
   if($LASTEXITCODE -ne 0){
     $lastLine = @($out -split "`n") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Last 1
-    Add-Result $id "fail" ([string]$lastLine).Trim()
+    Add-Result $id "fail" ([string]$lastLine).Trim() $required
     return
   }
-  if($out -match [regex]::Escape($greenToken)){ Add-Result $id "pass" "green (incl. real generation)" }
-  elseif($out -match 'INCONCLUSIVE'){ Add-Result $id "inconclusive" "neg+binding ok; positive not run (no backend/model)" }
-  else { Add-Result $id "fail" "no green token, no inconclusive marker" }
+  if($out -match [regex]::Escape($greenToken)){ Add-Result $id "pass" "green (incl. real generation)" $required }
+  elseif($out -match 'INCONCLUSIVE'){ Add-Result $id "inconclusive" "negative and binding checks passed; positive generation did not run" $required }
+  else { Add-Result $id "fail" "no green token, no inconclusive marker" $required }
 }
 
 $ollamaArgs = @(); if($OllamaModel){ $ollamaArgs = @("-ModelId",$OllamaModel) }
-Run-Trio "engine:ollama" "_selftest_pie_engine_ollama_v1.ps1" $ollamaArgs "SELFTEST_PIE_ENGINE_OLLAMA_V1_GREEN"
+Run-Trio "engine:ollama" "_selftest_pie_engine_ollama_v1.ps1" $ollamaArgs "SELFTEST_PIE_ENGINE_OLLAMA_V1_GREEN" $requiredEngineSet.ContainsKey('ollama')
 
 $llamaArgs = @(); if($LlamaCppModel){ $llamaArgs = @("-ModelId",$LlamaCppModel) }
-Run-Trio "engine:llamacpp" "_selftest_pie_engine_llamacpp_v1.ps1" $llamaArgs "SELFTEST_PIE_ENGINE_LLAMACPP_V1_GREEN"
+Run-Trio "engine:llamacpp" "_selftest_pie_engine_llamacpp_v1.ps1" $llamaArgs "SELFTEST_PIE_ENGINE_LLAMACPP_V1_GREEN" $requiredEngineSet.ContainsKey('llamacpp')
 
 $onnxArgs = @(); if($OnnxModelDir){ $onnxArgs = @("-ModelDir",$OnnxModelDir) }
-Run-Trio "engine:onnx" "_selftest_pie_engine_onnx_v1.ps1" $onnxArgs "SELFTEST_PIE_ENGINE_ONNX_V1_GREEN"
+Run-Trio "engine:onnx" "_selftest_pie_engine_onnx_v1.ps1" $onnxArgs "SELFTEST_PIE_ENGINE_ONNX_V1_GREEN" $requiredEngineSet.ContainsKey('onnx')
 
 # --- 5. State layer (release-blocker B1/B2 foundation): schema version guard + atomic writes. ---
 Run-Trio "state:migrations" "_selftest_pie_migrations_v1.ps1" @() "SELFTEST_PIE_MIGRATIONS_V1_GREEN"
@@ -173,11 +193,16 @@ Run-Trio "state:transaction" "_selftest_pie_txn_v1.ps1" @() "SELFTEST_PIE_TXN_V1
 Run-Trio "state:kill_injection" "_selftest_pie_kill_injection_v1.ps1" @() "SELFTEST_PIE_KILL_INJECTION_V1_GREEN"
 Run-Trio "state:session_kill" "_selftest_pie_session_kill_injection_v1.ps1" @() "SELFTEST_PIE_SESSION_KILL_INJECTION_V1_GREEN"
 Run-Trio "context:compaction" "_selftest_pie_compaction_v1.ps1" @() "SELFTEST_PIE_COMPACTION_V1_GREEN"
+Run-Trio "state:run_seal_transaction" "_selftest_pie_run_seal_txn_v1.ps1" @() "SELFTEST_PIE_RUN_SEAL_TXN_V1_GREEN"
+Run-Trio "evidence:run_provenance" "_selftest_pie_run_provenance_v1.ps1" @() "SELFTEST_PIE_RUN_PROVENANCE_V1_GREEN"
+Run-Trio "state:run_ledger_concurrency" "_selftest_pie_run_ledger_concurrency_v1.ps1" @() "SELFTEST_PIE_RUN_LEDGER_CONCURRENCY_V1_GREEN"
 
 # --- Aggregate + receipt. ---
 $fail = @($results | Where-Object { $_.status -eq "fail" }).Count
 $pass = @($results | Where-Object { $_.status -eq "pass" }).Count
 $inc  = @($results | Where-Object { $_.status -eq "inconclusive" }).Count
+$requiredInc = @($results | Where-Object { $_.required -and $_.status -eq "inconclusive" }).Count
+$certified = ($fail -eq 0 -and $requiredInc -eq 0)
 
 $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd_HHmmss_fff")
 $outDir = Join-Path $RepoRoot "runs\engine_verify"
@@ -186,8 +211,11 @@ $receipt = [ordered]@{
   schema        = "pie.engine.verify.report.v1"
   generated_utc = (Get-Date).ToUniversalTime().ToString("o")
   repo_root     = $RepoRoot
+  required_engines = @($RequiredEngines)
   totals        = [ordered]@{ pass=$pass; fail=$fail; inconclusive=$inc }
-  green         = ($fail -eq 0)
+  required_inconclusive = $requiredInc
+  certified     = $certified
+  green         = $certified
   checks        = $results
 }
 $enc = New-Object System.Text.UTF8Encoding($false)
@@ -196,8 +224,8 @@ $json = ($receipt | ConvertTo-Json -Depth 8)
 [System.IO.File]::WriteAllText((Join-Path $outDir "latest.json"), $json, $enc)
 
 Write-Host ("SUMMARY pass=" + $pass + " fail=" + $fail + " inconclusive=" + $inc) -ForegroundColor Cyan
-if($fail -eq 0){
+if($certified){
   Write-Host "PIE_ENGINE_VERIFY_ALL_V1_GREEN" -ForegroundColor Green
 } else {
-  throw ("PIE_ENGINE_VERIFY_ALL_V1_FAIL: " + $fail + " check(s) failed; see runs\engine_verify\latest.json")
+  throw ("PIE_ENGINE_VERIFY_ALL_V1_NOT_CERTIFIED: failures=" + $fail + " required_inconclusive=" + $requiredInc + "; see runs\engine_verify\latest.json")
 }

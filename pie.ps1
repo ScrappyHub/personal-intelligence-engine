@@ -27,6 +27,7 @@ param(
   [string]$Language = "",
   [string]$Version = "",
   [string]$OutputDirectory = "",
+  [string]$RunId = "",
   [switch]$NewSettings,
   [switch]$PullMissing,
   [switch]$SetDefault,
@@ -41,7 +42,13 @@ param(
   [int]$Port = 4317,
   [int]$TurnIndex = 0,
   [switch]$AllowMock,
-  [switch]$PassphraseStdin
+  [switch]$PassphraseStdin,
+  [switch]$TextStdin,
+  [switch]$PromptStdin,
+  [switch]$GoalStdin,
+  [switch]$Sign,
+  [switch]$RequireSig,
+  [switch]$RequireCertifiedInference
 )
 
 Set-StrictMode -Version Latest
@@ -308,6 +315,25 @@ function Invoke-PieScript {
   }
 }
 
+function Invoke-PieScriptWithStdin {
+  param(
+    [Parameter(Mandatory=$true)][string]$Script,
+    [Parameter(Mandatory=$false)][string[]]$Args = @(),
+    [Parameter(Mandatory=$true)][AllowEmptyString()][string]$InputText
+  )
+  $ScriptPath = Join-Path $Scripts $Script
+  if(-not (Test-Path -LiteralPath $ScriptPath -PathType Leaf)){ throw ("PIE_CLI_SCRIPT_MISSING: " + $ScriptPath) }
+  $InputText | & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $ScriptPath @Args
+  if($LASTEXITCODE -ne 0){ throw ("PIE_CLI_CHILD_FAIL: " + $Script) }
+}
+
+function Read-PieStdinPayload([string]$Label){
+  $payload = [Console]::In.ReadToEnd()
+  $payload = $payload.TrimEnd("`r","`n")
+  if([string]::IsNullOrWhiteSpace($payload)){ throw ("PIE_" + $Label + "_STDIN_EMPTY") }
+  return $payload
+}
+
 function Invoke-PieInteractiveScript {
   param(
     [Parameter(Mandatory=$true)][string]$Script,
@@ -341,6 +367,20 @@ function Resolve-PieModel {
   return "qwen2.5-coder:7b"
 }
 
+function Resolve-PieRunId {
+  if(-not [string]::IsNullOrWhiteSpace($RunId)){
+    if($RunId -notmatch '^[0-9a-f]{32}$'){ throw "PIE_RUN_ID_INVALID" }
+    return $RunId
+  }
+  $ledgerPath = Join-Path $RepoRoot 'runs\run_ledger.ndjson'
+  if(-not (Test-Path -LiteralPath $ledgerPath -PathType Leaf)){ throw "PIE_RUN_LEDGER_MISSING" }
+  $line = Get-Content -LiteralPath $ledgerPath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Last 1
+  if([string]::IsNullOrWhiteSpace($line)){ throw "PIE_RUN_LEDGER_EMPTY" }
+  $latest = [string](($line | ConvertFrom-Json).run_id)
+  if($latest -notmatch '^[0-9a-f]{32}$'){ throw "PIE_RUN_LEDGER_LATEST_INVALID" }
+  return $latest
+}
+
 function Show-Help {
   Write-Host ""
   Write-Host "PIE - Personal Intelligence Engine" -ForegroundColor Cyan
@@ -364,7 +404,7 @@ function Show-Help {
   Write-Host "  models          List, browse, and select local models"
   Write-Host "  pull            Download a model onto this machine"
   Write-Host "  seal-ollama     Seal a pulled Ollama model into the registry (-Model <tag>)"
-  Write-Host "  run             Run one governed generation (-Prompt <text> [-Backend stub|ollama|llamacpp|onnx])"
+  Write-Host "  run             Generate, seal, verify, or package a provenance-bound run"
   Write-Host "  chat            Start local chat"
   Write-Host "  ask             Ask PIE once using session memory/attachments"
   Write-Host "  doc             Send a document to PIE"
@@ -400,6 +440,11 @@ function Show-Help {
   Write-Host "  pie models catalog"
   Write-Host "  pie pull -Model qwen2.5-coder:7b -SetDefault"
   Write-Host "  pie models use -Model qwen2.5-coder:7b"
+  Write-Host "  pie run -Model <sealed-id> -Backend ollama -Prompt <text>"
+  Write-Host "  pie run seal [-RunId <id>]"
+  Write-Host "  pie run verify [-RunId <id>] [-RequireCertifiedInference]"
+  Write-Host "  pie run packet [-RunId <id>] [-Sign]"
+  Write-Host "  pie run verify-packet -Path <packet-dir> [-RequireSig] [-RequireCertifiedInference]"
   Write-Host "  pie agent start -SessionId my_work -TargetRepo . -Goal `"Fix tests`""
   Write-Host "  pie agent inspect -SessionId my_work"
   Write-Host "  pie agent exec -SessionId my_work -Text `"git status`""
@@ -533,14 +578,19 @@ switch($Command.ToLowerInvariant()){
       "" { Show-AgentHelp; return }
       "help" { Show-AgentHelp; return }
       "start" {
+        if($GoalStdin){ $Goal = Read-PieStdinPayload "AGENT_GOAL" }
         $Model = Resolve-PieModel
         if([string]::IsNullOrWhiteSpace($TargetRepo)){ $TargetRepo = (Get-Location).Path }
         if(-not (Test-Path -LiteralPath $TargetRepo -PathType Container)){
           throw ("PIE_AGENT_TARGET_REPO_NOT_FOUND: " + $TargetRepo + ". Use -TargetRepo . for the current repository or provide an existing directory.")
         }
         $A = @("-RepoRoot",$RepoRoot,"-SessionId",$SessionId,"-Backend",$Backend,"-Model",$Model,"-ProjectRepo",$TargetRepo)
-        if(-not [string]::IsNullOrWhiteSpace($Goal)){ $A += @("-Goal",$Goal) }
-        Invoke-PieScript -Script "pie_agent_start_v1.ps1" -Args $A
+        if(-not [string]::IsNullOrWhiteSpace($Goal)){
+          $A += "-GoalStdin"
+          Invoke-PieScriptWithStdin -Script "pie_agent_start_v1.ps1" -Args $A -InputText $Goal
+        } else {
+          Invoke-PieScript -Script "pie_agent_start_v1.ps1" -Args $A
+        }
         return
       }
       "status" {
@@ -558,15 +608,16 @@ switch($Command.ToLowerInvariant()){
         return
       }
       "ask" {
+        if($TextStdin){ $Text = Read-PieStdinPayload "AGENT_ASK_TEXT" }
         if([string]::IsNullOrWhiteSpace($Text)){ throw "PIE_AGENT_ASK_TEXT_REQUIRED" }
         if($TimeoutSeconds -lt 1){ throw "PIE_AGENT_TIMEOUT_SECONDS_INVALID" }
         if($Retries -lt 0 -or $Retries -gt 2){ throw "PIE_AGENT_RETRIES_INVALID: expected 0..2" }
         if($ProgressIntervalSeconds -lt 1){ throw "PIE_AGENT_PROGRESS_INTERVAL_INVALID" }
         [void](PIE_GetAgentSession -RepoRoot $RepoRoot -SessionId $SessionId -RequireRunning -RequireIntegrity)
-        Invoke-PieScript -Script "pie_ask_v1.ps1" -Args @(
+        Invoke-PieScriptWithStdin -Script "pie_ask_v1.ps1" -InputText $Text -Args @(
           "-RepoRoot",$RepoRoot,
           "-SessionId",$SessionId,
-          "-Message",$Text,
+          "-MessageStdin",
           "-TimeoutSeconds",$TimeoutSeconds,
           "-MaxAttempts",($Retries + 1),
           "-ProgressIntervalSeconds",$ProgressIntervalSeconds
@@ -673,6 +724,7 @@ switch($Command.ToLowerInvariant()){
   }
 
   "ask" {
+    if($TextStdin){ $Text = Read-PieStdinPayload "ASK_TEXT" }
     if([string]::IsNullOrWhiteSpace($Text)){
       if(-not [string]::IsNullOrWhiteSpace($Subcommand)){
         $Text = $Subcommand
@@ -681,12 +733,13 @@ switch($Command.ToLowerInvariant()){
       }
     }
 
-    Invoke-PieScript `
+    Invoke-PieScriptWithStdin `
       -Script "pie_ask_v1.ps1" `
+      -InputText $Text `
       -Args @(
         "-RepoRoot",$RepoRoot,
         "-SessionId",$SessionId,
-        "-Message",$Text,
+        "-MessageStdin",
         "-TimeoutSeconds",$TimeoutSeconds,
         "-MaxAttempts",($Retries + 1),
         "-ProgressIntervalSeconds",$ProgressIntervalSeconds
@@ -1173,17 +1226,47 @@ switch($Command.ToLowerInvariant()){
   "run" {
     # Direct governed run through an engine backend (stub|ollama|llamacpp|onnx). Non-stub backends
     # require a sealed model manifest under registry\models\<model>\ and a live backend.
-    if([string]::IsNullOrWhiteSpace($Prompt)){ throw "PIE_RUN_PROMPT_REQUIRED: use -Prompt <text>" }
+    if($Subcommand -eq 'seal'){
+      $ResolvedRunId = Resolve-PieRunId
+      Invoke-PieScript -Script 'pie_run_seal_v1.ps1' -Args @('-RepoRoot',$RepoRoot,'-RunId',$ResolvedRunId)
+      return
+    }
+    if($Subcommand -eq 'verify'){
+      $ResolvedRunId = Resolve-PieRunId
+      $A = @('-RepoRoot',$RepoRoot,'-RunRoot',(Join-Path $RepoRoot ('runs\run_' + $ResolvedRunId)))
+      if($RequireCertifiedInference){ $A += '-RequireCertifiedInference' }
+      Invoke-PieScript -Script 'pie_run_verify_v1.ps1' -Args $A
+      return
+    }
+    if($Subcommand -eq 'packet'){
+      $ResolvedRunId = Resolve-PieRunId
+      $A = @('-RepoRoot',$RepoRoot,'-RunId',$ResolvedRunId)
+      if($Sign){ $A += '-Sign' }
+      Invoke-PieScript -Script 'pie_run_packet_build_v1.ps1' -Args $A
+      return
+    }
+    if($Subcommand -eq 'verify-packet'){
+      if([string]::IsNullOrWhiteSpace($Path)){ throw 'PIE_RUN_PACKET_PATH_REQUIRED' }
+      $A = @('-RepoRoot',$RepoRoot,'-PacketRoot',$Path)
+      if($RequireSig){ $A += '-RequireSig' }
+      if($RequireCertifiedInference){ $A += '-RequireCertifiedInference' }
+      Invoke-PieScript -Script 'pie_run_packet_verify_v1.ps1' -Args $A
+      return
+    }
+    if(-not [string]::IsNullOrWhiteSpace($Subcommand)){ throw ('PIE_RUN_UNKNOWN_SUBCOMMAND: ' + $Subcommand) }
+    if($PromptStdin){ $Prompt = Read-PieStdinPayload "RUN_PROMPT" }
+    if([string]::IsNullOrWhiteSpace($Prompt)){ throw "PIE_RUN_PROMPT_REQUIRED: use -Prompt <text> or -PromptStdin" }
     $RunModel = Resolve-PieModel
-    $A = @("-RepoRoot",$RepoRoot,"-ModelId",$RunModel,"-Prompt",$Prompt)
+    $A = @("-RepoRoot",$RepoRoot,"-ModelId",$RunModel,"-PromptStdin")
     if(-not [string]::IsNullOrWhiteSpace($Backend)){ $A += @("-Backend",$Backend) }
-    Invoke-PieScript -Script "pie_run_v1.ps1" -Args $A
+    Invoke-PieScriptWithStdin -Script "pie_run_v1.ps1" -Args $A -InputText $Prompt
     return
   }
 
   "verify-engines" {
     # Consolidated engine verification: parse-gate + persona alignment + Tier-0 + the three trios.
-    Invoke-PieScript -Script "_RUN_pie_engine_verify_all_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-IncludeTier0")
+    $VerifyModel = Resolve-PieModel
+    Invoke-PieScript -Script "_RUN_pie_engine_verify_all_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-IncludeTier0","-RequiredEngines","ollama","-OllamaModel",$VerifyModel)
     return
   }
 
@@ -1203,7 +1286,8 @@ switch($Command.ToLowerInvariant()){
 
   "verify-full" {
     # Full-system release gate: engines + session recovery + backup + soak, all green required.
-    Invoke-PieScript -Script "_RUN_pie_verify_full_v1.ps1" -Args @("-RepoRoot",$RepoRoot)
+    $VerifyModel = Resolve-PieModel
+    Invoke-PieScript -Script "_RUN_pie_verify_full_v1.ps1" -Args @("-RepoRoot",$RepoRoot,"-OllamaModel",$VerifyModel)
     return
   }
 

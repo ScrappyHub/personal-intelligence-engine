@@ -1,5 +1,6 @@
 param(
   [Parameter(Mandatory=$true)][string]$RepoRoot,
+  [Parameter(Mandatory=$false)][string]$OllamaModel = "",
   [switch]$SkipSoak
 )
 
@@ -32,7 +33,9 @@ function Run-Part([string]$id,[string]$script,[string[]]$cargs,[string]$greenTok
 
 Write-Host "PIE_VERIFY_FULL_START" -ForegroundColor DarkCyan
 
-Run-Part "engines"          "_RUN_pie_engine_verify_all_v1.ps1"      @("-RepoRoot",$RepoRoot,"-IncludeTier0") "PIE_ENGINE_VERIFY_ALL_V1_GREEN"
+$engineArgs = @("-RepoRoot",$RepoRoot,"-IncludeTier0","-RequiredEngines","ollama")
+if(-not [string]::IsNullOrWhiteSpace($OllamaModel)){ $engineArgs += @("-OllamaModel",$OllamaModel) }
+Run-Part "engines"          "_RUN_pie_engine_verify_all_v1.ps1"      $engineArgs "PIE_ENGINE_VERIFY_ALL_V1_GREEN"
 Run-Part "session_recovery" "_selftest_pie_session_turn_recovery_v1.ps1" @("-RepoRoot",$RepoRoot)            "SELFTEST_PIE_SESSION_TURN_RECOVERY_V1_GREEN"
 Run-Part "backup"           "selftest_pie_session_backup_v1.ps1"     @("-RepoRoot",$RepoRoot)                 "PIE_SESSION_BACKUP_SELFTEST_OK"
 if(-not $SkipSoak){

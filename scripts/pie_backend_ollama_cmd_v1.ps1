@@ -1,13 +1,20 @@
 param(
   [Parameter(Mandatory=$true)][string]$Model,
   [Parameter(Mandatory=$false)][string]$Message = "",
-  [Parameter(Mandatory=$false)][string]$MessagePath = ""
+  [Parameter(Mandatory=$false)][string]$MessagePath = "",
+  [Parameter(Mandatory=$false)][string]$PromptPath = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-if(-not [string]::IsNullOrWhiteSpace($MessagePath)){
+if(-not [string]::IsNullOrWhiteSpace($PromptPath)){
+  if(-not (Test-Path -LiteralPath $PromptPath -PathType Leaf)){
+    throw ("PIE_OLLAMA_PROMPT_PATH_NOT_FOUND: " + $PromptPath)
+  }
+  $Prompt = Get-Content -LiteralPath $PromptPath -Raw
+}
+elseif(-not [string]::IsNullOrWhiteSpace($MessagePath)){
 
   if(-not (Test-Path -LiteralPath $MessagePath -PathType Leaf)){
     throw ("PIE_OLLAMA_MESSAGE_PATH_NOT_FOUND: " + $MessagePath)
@@ -16,14 +23,15 @@ if(-not [string]::IsNullOrWhiteSpace($MessagePath)){
   $Message = Get-Content -LiteralPath $MessagePath -Raw
 }
 
-if([string]::IsNullOrWhiteSpace($Message)){
+if([string]::IsNullOrWhiteSpace($PromptPath) -and [string]::IsNullOrWhiteSpace($Message)){
   throw "PIE_OLLAMA_MESSAGE_REQUIRED"
 }
 
-. (Join-Path $PSScriptRoot "_lib_pie_persona_v1.ps1")
-$System = PIE_PersonaSystem "Ollama"
-
-$Prompt = $System + "`n`n" + $Message.Replace("\n","`n")
+if([string]::IsNullOrWhiteSpace($PromptPath)){
+  . (Join-Path $PSScriptRoot "_lib_pie_persona_v1.ps1")
+  $System = PIE_PersonaSystem "Ollama"
+  $Prompt = $System + "`n`n" + $Message.Replace("\n","`n")
+}
 
 $Body = [ordered]@{
   model = $Model
@@ -95,4 +103,3 @@ if([string]::IsNullOrWhiteSpace($ResponseText)){
 }
 
 Write-Output $ResponseText
-

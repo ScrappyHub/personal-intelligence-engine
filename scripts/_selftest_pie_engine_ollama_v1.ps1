@@ -80,7 +80,7 @@ $out = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $runScript `
   -RepoRoot $RepoRoot -ModelId $ModelId -Prompt "In one word, say: ready" -Backend ollama 2>&1 | Out-String)
 if($LASTEXITCODE -ne 0){
   # Backend requested but unreachable is INCONCLUSIVE (environment), not a code failure.
-  if($out -match 'Unable to connect|PIE_OLLAMA_API_FAILED|actively refused'){
+  if($out -match 'Unable to connect|PIE_OLLAMA_API_FAILED|PIE_MODEL_OLLAMA_TAGS_FAILED|actively refused'){
     Write-Host "PIE_ENGINE_OLLAMA_SELFTEST_INCONCLUSIVE (Ollama unreachable; start it: .\pie.ps1 runtime start)" -ForegroundColor Yellow
     return
   }

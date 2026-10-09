@@ -4,13 +4,15 @@ param(
   [Parameter(Mandatory=$false)][Alias("BackendMode")][string]$Backend = "ollama",
   [Parameter(Mandatory=$false)][Alias("ModelId")][string]$Model = "qwen2.5-coder:7b",
   [Parameter(Mandatory=$false)][string]$ProjectRepo = "",
-  [Parameter(Mandatory=$false)][string]$Goal = ""
+  [Parameter(Mandatory=$false)][string]$Goal = "",
+  [Parameter(Mandatory=$false)][switch]$GoalStdin
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $SessionLock = $null
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
+if($GoalStdin){ $Goal = ([Console]::In.ReadToEnd()).TrimEnd("`r","`n") }
 . (Join-Path $RepoRoot "scripts\_lib_pie_agent_session_v1.ps1")
 
 if($SessionId -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$'){ throw "PIE_AGENT_SESSION_ID_INVALID" }
